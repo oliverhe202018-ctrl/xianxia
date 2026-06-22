@@ -1,9 +1,14 @@
 import { EntityManager } from '../core/EntityManager';
+import { GameState } from '../core/GameState';
 
 export class MovementSystem {
     private waypoints: { x: number, y: number }[];
 
     constructor(private entityManager: EntityManager, waypoints: { x: number, y: number }[]) {
+        this.waypoints = waypoints;
+    }
+
+    public setWaypoints(waypoints: { x: number, y: number }[]) {
         this.waypoints = waypoints;
     }
 
@@ -21,6 +26,14 @@ export class MovementSystem {
             const targetIndex = enemy.pathFollower.waypointIndex;
             // 判断是否到达终点
             if (targetIndex >= this.waypoints.length) {
+                // 根据敌人血量上限或其他属性判断类型，这里简单用血量上限区分
+                let damage = 1;
+                if (enemy.health.max >= 500) damage = 10; // Boss
+                else if (enemy.health.max >= 200) damage = 5; // Elite
+
+                GameState.getInstance().deductHealth(damage);
+                this.entityManager.spawnTextEffect(enemy.transform.x, enemy.transform.y, `-${damage} 生命`);
+
                 this.entityManager.recycleEnemy(enemy);
                 continue;
             }

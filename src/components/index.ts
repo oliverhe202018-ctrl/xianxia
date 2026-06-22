@@ -39,6 +39,11 @@ export interface TowerEntity {
     // Combat fields
     targetId?: number;
     lastAttackTime: number;
+    combatStats?: {
+        attack: number;
+        range: number;
+        attackSpeed: number;
+    };
 }
 
 export interface ProjectileEntity {

@@ -1,4 +1,8 @@
 import { GachaEngine, GachaItem, GachaResult } from '../utils/GachaEngine';
+import { EventBus } from '../core/EventBus';
+import { GameConfig, TowerCharName } from '../config/GameConfig';
+import { GameState } from '../core/GameState';
+import { UserStore } from '../store/UserStore';
 
 // 模拟 PrismaClient 以防本地未连接真实库时报错
 const prisma = {
@@ -31,6 +35,46 @@ export class GachaSystem {
 
     private constructor() {
         this.engine = new GachaEngine(DEFAULT_POOL);
+        EventBus.on('gacha:request', this.handleGachaRequest);
+    }
+
+    private handleGachaRequest = (data: { amount: number }) => {
+        const totalCost = GameConfig.Gacha.cost * data.amount;
+        if (GameState.getInstance().spendStones(totalCost)) {
+            for (let i = 0; i < data.amount; i++) {
+                const result = this.drawTowerRank();
+                EventBus.emit('gacha:result', result);
+            }
+        } else {
+            console.log("灵石不足！");
+        }
+    };
+
+    private drawTowerRank(): { charName: TowerCharName, rank: number } {
+        const isVip = UserStore.getInstance().getIsVip();
+        const weights: Record<number, number> = { ...GameConfig.Gacha.weights };
+        
+        if (isVip) {
+            weights[3] = weights[3] * GameConfig.Gacha.vipBonusMultipliers[3];
+            weights[4] = weights[4] * GameConfig.Gacha.vipBonusMultipliers[4];
+        }
+
+        const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+        let rand = Math.random() * totalWeight;
+        let finalRank = 1;
+
+        for (const [rankStr, weight] of Object.entries(weights)) {
+            rand -= weight;
+            if (rand <= 0) {
+                finalRank = parseInt(rankStr, 10);
+                break;
+            }
+        }
+
+        const chars: TowerCharName[] = ['剑', '火', '水', '雷', '风'];
+        const charName = chars[Math.floor(Math.random() * chars.length)];
+
+        return { charName, rank: finalRank };
     }
 
     public static getInstance(): GachaSystem {

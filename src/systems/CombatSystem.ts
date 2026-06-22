@@ -213,6 +213,20 @@ export class CombatSystem {
                 }
             }
         }
+
+        // 5. 文字特效更新
+        for (let i = this.entityManager.textEffects.length - 1; i >= 0; i--) {
+            const te = this.entityManager.textEffects[i];
+            te.age += deltaMS;
+            if (te.age >= te.lifeTime) {
+                if (te.view.parent) te.view.parent.removeChild(te.view);
+                this.entityManager.textEffects.splice(i, 1);
+            } else {
+                const ratio = te.age / te.lifeTime;
+                te.view.alpha = 1 - ratio;
+                te.view.y -= 0.5 * delta; // 向上飘动
+            }
+        }
     }
 
     private damageEnemy(enemy: any, amount: number) {
@@ -228,6 +242,8 @@ export class CombatSystem {
             const finalStones = isVip ? Math.ceil(baseStones * 1.3) : baseStones;
             
             GameState.getInstance().addStones(finalStones);
+            this.entityManager.spawnTextEffect(enemy.transform.x, enemy.transform.y, `+${finalStones} 灵石`);
+            
             this.entityManager.recycleEnemy(enemy);
         }
     }

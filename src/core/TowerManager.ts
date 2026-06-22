@@ -4,8 +4,9 @@ import { MAP_GRID, TILE_SIZE } from '../config/MapConfig';
 import { GAME } from '../config/game';
 import { GameState } from './GameState';
 import { UserStore } from '../store/UserStore';
-
-const CHARS = ['剑', '火', '水', '雷', '风'];
+import { EventBus } from './EventBus';
+import { StatsCenter } from '../services/StatsCenter';
+import { TowerCharName } from '../config/GameConfig';
 
 // UI 配置
 const SLOT_COUNT = 5;
@@ -42,6 +43,7 @@ export class TowerManager {
         }
 
         this.initUI();
+        EventBus.on('gacha:result', this.handleGachaResult.bind(this));
     }
 
     private initUI() {
@@ -57,90 +59,15 @@ export class TowerManager {
             slotBg.y = SLOT_START_Y;
             this.uiContainer.addChild(slotBg);
         }
-
-        // 绘制聚灵按钮
-        const btnWidth = 80;
-        const btnHeight = 40;
-        const btn = new Graphics();
-        btn.beginFill(0x4CAF50);
-        btn.drawRoundedRect(0, 0, btnWidth, btnHeight, 10);
-        btn.endFill();
-
-        btn.x = GAME.WIDTH - btnWidth - 20;
-        btn.y = GAME.HEIGHT - btnHeight - 20;
-
-        btn.eventMode = 'static';
-        btn.cursor = 'pointer';
-        btn.on('pointerdown', () => this.spawnRandomTower());
-
-        const btnText = new Text('聚灵(10)', {
-            fontFamily: 'Arial',
-            fontSize: 16,
-            fill: 0xFFFFFF,
-            fontWeight: 'bold'
-        });
-        btnText.x = btnWidth / 2 - btnText.width / 2;
-        btnText.y = btnHeight / 2 - btnText.height / 2;
-        btn.addChild(btnText);
-        this.uiContainer.addChild(btn);
-
-        // 顶部灵石 UI
-        const stonesText = new Text('', {
-            fontFamily: 'Arial',
-            fontSize: 20,
-            fill: 0x00FFFF,
-            fontWeight: 'bold'
-        });
-        stonesText.x = 20;
-        stonesText.y = 20;
-        this.uiContainer.addChild(stonesText);
-
-        GameState.getInstance().onStonesChanged((stones) => {
-            stonesText.text = `灵石: ${stones}`;
-        });
     }
 
-    // 抽卡核心逻辑
-    private drawRank(): number {
-        const isVip = UserStore.getInstance().getIsVip();
-        
-        // 基础权重配置 (1阶, 2阶, 3阶, 4阶)
-        let weights = [70, 20, 8, 2];
+    // 抽卡核心逻辑（已迁移至 GachaSystem，通过 EventBus 解耦）
 
-        // VIP 特权：3阶、4阶抽取权重提升 20%
-        if (isVip) {
-            weights[2] = weights[2] * 1.2;
-            weights[3] = weights[3] * 1.2;
-            // 重新归一化 (可选，这里简单按总量随机)
-        }
-
-        const totalWeight = weights.reduce((a, b) => a + b, 0);
-        let rand = Math.random() * totalWeight;
-
-        for (let i = 0; i < weights.length; i++) {
-            rand -= weights[i];
-            if (rand <= 0) {
-                return i + 1; // 返回阶数 (1-4)
-            }
-        }
-        return 1;
-    }
-
-    public spawnRandomTower() {
+    private handleGachaResult(data: { charName: TowerCharName, rank: number }) {
         const emptyIndex = this.slots.findIndex(slot => slot === null);
-        if (emptyIndex === -1) {
-            console.log("备战槽已满！");
-            return;
-        }
+        if (emptyIndex === -1) return; // 防御性判断
 
-        if (!GameState.getInstance().spendStones(10)) {
-            console.log("灵石不足！");
-            return;
-        }
-
-        const charName = CHARS[Math.floor(Math.random() * CHARS.length)];
-        const rank = this.drawRank(); // 使用含 VIP 加成的抽卡概率
-        
+        const { charName, rank } = data;
         const towerViews = this.createTowerView(charName, rank);
         const view = towerViews.view;
         
@@ -156,7 +83,8 @@ export class TowerManager {
             gridY: -1,
             slotIndex: emptyIndex,
             view: view,
-            lastAttackTime: 0
+            lastAttackTime: 0,
+            combatStats: StatsCenter.compute(charName, rank)
         };
 
         this.slots[emptyIndex] = entity;
@@ -177,17 +105,45 @@ export class TowerManager {
         const bg = new Graphics();
         view.addChild(bg);
 
-        const text = new Text(`${charName}${rank}`, {
-            fontFamily: 'Arial',
-            fontSize: 18,
-            fill: 0xFFFFFF,
+        // 属性 Icon 映射
+        const iconMap: Record<string, string> = {
+            '雷': '⚡',
+            '水': '💧',
+            '火': '🔥',
+            '风': '🌪️',
+            '剑': '⚔️'
+        };
+
+        const iconText = new Text(iconMap[charName] || '', {
+            fontSize: 14,
+        });
+        iconText.anchor.set(0.5);
+        iconText.y = -10; // 稍微偏上
+        view.addChild(iconText);
+
+        const text = new Text(charName, {
+            fontFamily: '"Microsoft YaHei", sans-serif',
+            fontSize: 20,
+            fill: 0x000000, // 黑色文字
             fontWeight: 'bold'
         });
         text.anchor.set(0.5);
+        text.y = 5; // 稍微偏下给图标让位
         view.addChild(text);
 
+        const rankText = new Text(`${rank}`, {
+            fontFamily: 'Arial',
+            fontSize: 12,
+            fill: 0xFF0000, // 红色等级
+            fontWeight: 'bold'
+        });
+        rankText.anchor.set(1, 0); // 右上角对齐
+        rankText.x = SLOT_SIZE / 2 - 2;
+        rankText.y = -SLOT_SIZE / 2 + 2;
+        view.addChild(rankText);
+
         // 初始化视觉表现
-        this.updateTowerBg(bg, vipGlow, rank, isVip);
+        this.updateTowerBg(bg, vipGlow, isVip);
         
         bg.x = -SLOT_SIZE / 2;
         bg.y = -SLOT_SIZE / 2;
@@ -196,31 +152,26 @@ export class TowerManager {
     }
 
     private updateTowerVisual(tower: TowerEntity) {
-        const isVip = UserStore.getInstance().getIsVip();
-        const vipGlow = tower.view.children[0] as Graphics;
-        const bg = tower.view.children[1] as Graphics;
-        const text = tower.view.children[2] as Text;
+        const text = tower.view.children[3] as Text;
+        const rankText = tower.view.children[4] as Text;
         
-        this.updateTowerBg(bg, vipGlow, tower.rank, isVip);
-        text.text = `${tower.charName}${tower.rank}`;
+        text.text = tower.charName;
+        rankText.text = `${tower.rank}`;
     }
 
-    private updateTowerBg(bg: Graphics, vipGlow: Graphics, rank: number, isVip: boolean) {
+    private updateTowerBg(bg: Graphics, vipGlow: Graphics, isVip: boolean) {
         // VIP 金色发光效果
         vipGlow.clear();
         if (isVip) {
             vipGlow.beginFill(0xFFD700, 0.4); // 半透明金色
-            // 做一个比本体稍大一点的边缘发光
             vipGlow.drawRect(-SLOT_SIZE / 2 - 4, -SLOT_SIZE / 2 - 4, SLOT_SIZE + 8, SLOT_SIZE + 8);
             vipGlow.endFill();
         }
 
-        // 基础塔颜色
+        // 基础塔底色为白底，加粗边框
         bg.clear();
-        const colors = [0x555555, 0x1E90FF, 0x8A2BE2, 0xFFD700, 0xFF4500]; 
-        const color = colors[Math.min(rank - 1, colors.length - 1)];
-        bg.beginFill(color);
-        bg.lineStyle(2, 0xFFFFFF);
+        bg.beginFill(0xFFFFFF);
+        bg.lineStyle(2, 0x000000);
         bg.drawRect(0, 0, SLOT_SIZE, SLOT_SIZE);
         bg.endFill();
     }
@@ -311,6 +262,13 @@ export class TowerManager {
         this.destroyTower(source);
         target.rank++;
         this.updateTowerVisual(target);
+        target.combatStats = StatsCenter.compute(target.charName as TowerCharName, target.rank);
+        
+        EventBus.emit('tower:merged', { 
+            entityId: target.id, 
+            charName: target.charName as TowerCharName, 
+            newRank: target.rank 
+        });
     }
 
     private revertTowerPos(tower: TowerEntity) {

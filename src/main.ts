@@ -8,8 +8,12 @@ import { MovementSystem } from './systems/MovementSystem';
 import { TargetingSystem } from './systems/TargetingSystem';
 import { CombatSystem } from './systems/CombatSystem';
 import { UserStore } from './store/UserStore';
-import { GameState } from './core/GameState';
+import { GameState, GamePhase } from './core/GameState';
 import { initUI } from './ui/initUI';
+import { AssetLoader } from './utils/AssetLoader';
+import { GameUI } from './ui/GameUI';
+import { InputManager } from './core/InputManager';
+import { EventBus } from './core/EventBus';
 
 async function main(): Promise<void> {
   // ── 局外配置初始化 ──────────────────────────────────────────────
@@ -34,8 +38,12 @@ async function main(): Promise<void> {
   // 开启舞台排序，以支持 zIndex 拖拽显示层级
   app.stage.sortableChildren = true;
 
+  // ── 资源预加载 ──────────────────────────────────────────────────
+  await AssetLoader.loadAssets();
+
   // ── 系统初始化 ────────────────────────────────────────────────
   const mapManager = new MapManager();
+  const gameUI = new GameUI();
   const entityManager = new EntityManager();
   const towerManager = new TowerManager();
   
@@ -48,17 +56,61 @@ async function main(): Promise<void> {
   mapManager.view.zIndex = 0; // 最底层地图
   entityManager.container.zIndex = 10; // 敌人与弹道、特效层
   towerManager.container.zIndex = 20; // 塔防层 (放置后)
-  towerManager.uiContainer.zIndex = 30; // UI 层 (最上层)
+  towerManager.uiContainer.zIndex = 30; // UI 层
+  gameUI.view.zIndex = 40; // 全局 UI 层 (最上层)
+  InputManager.getInstance().dragLayer.zIndex = 50; // 拖拽层
 
   app.stage.addChild(mapManager.view);
   app.stage.addChild(entityManager.container);
   app.stage.addChild(towerManager.container);
   app.stage.addChild(towerManager.uiContainer);
+  app.stage.addChild(gameUI.view);
+  app.stage.addChild(InputManager.getInstance().dragLayer);
+
+  // ── 游戏状态与重置控制 ──────────────────────────────────────────
+  const startGame = () => {
+      GameState.getInstance().resetGame(userStore.getStartingEnergy());
+      entityManager.reset();
+      waveManager.reset();
+      
+      // 第一关
+      mapManager.generateLevelMap(1);
+      const newWaypoints = mapManager.getWaypoints();
+      waveManager.setWaypoints(newWaypoints);
+      movementSystem.setWaypoints(newWaypoints);
+  };
+
+  EventBus.on('level:start', (data: { level: number }) => {
+      mapManager.generateLevelMap(data.level);
+      const newWaypoints = mapManager.getWaypoints();
+      waveManager.setWaypoints(newWaypoints);
+      movementSystem.setWaypoints(newWaypoints);
+  });
+
+  EventBus.on('game:over', () => {
+      gameUI.showGameOver(() => {
+          startGame();
+      });
+  });
+
+  gameUI.showLobby(() => {
+      startGame();
+  });
 
   // ── 游戏主循环 ────────────────────────────────────────────────
   app.ticker.add((delta: number) => {
     const deltaMS = app.ticker.deltaMS; // 距上一帧的真实时间间隔（毫秒）
+    const phase = GameState.getInstance().phase;
 
+    // 背景滚动
+    if (mapManager.bgSprite) {
+        mapManager.bgSprite.tilePosition.x -= 0.5 * delta;
+        mapManager.bgSprite.tilePosition.y += 0.2 * delta;
+    }
+
+    if (phase !== GamePhase.PLAYING) return;
+
+    mapManager.update(deltaMS);
     waveManager.update(deltaMS);
     movementSystem.update(delta);
     

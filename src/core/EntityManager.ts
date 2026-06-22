@@ -1,5 +1,5 @@
 import { ObjectPool } from '../utils/ObjectPool';
-import { Container, ParticleContainer, Sprite, Texture, Graphics } from 'pixi.js';
+import { Container, ParticleContainer, Sprite, Texture, Graphics, Text } from 'pixi.js';
 import { EnemyEntity, ProjectileEntity, EffectEntity } from '../components';
 import { SpatialHash } from '../utils/SpatialHash';
 
@@ -11,6 +11,9 @@ export class EntityManager {
     private enemyPool: ObjectPool<EnemyEntity>;
     private projectilePool: ObjectPool<ProjectileEntity>;
     private effectPool: ObjectPool<EffectEntity>;
+    
+    // 我们用另一个数组保存文字特效，因为它们不能复用 graphics
+    public textEffects: { view: Text, age: number, lifeTime: number }[] = [];
     
     private nextId: number = 1;
     public container: Container;
@@ -46,6 +49,24 @@ export class EntityManager {
             () => this.createEffectObj(),
             { initialSize: 20, resetFn: (e) => this.resetEntity(e) }
         );
+    }
+
+    public reset() {
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+            this.recycleEnemy(this.enemies[i]);
+        }
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            this.recycleProjectile(this.projectiles[i]);
+        }
+        for (let i = this.effects.length - 1; i >= 0; i--) {
+            this.recycleEffect(this.effects[i]);
+        }
+        for (const te of this.textEffects) {
+            if (te.view && te.view.parent) {
+                te.view.parent.removeChild(te.view);
+            }
+        }
+        this.textEffects = [];
     }
 
     private createEnemyObj(): EnemyEntity {
@@ -117,7 +138,7 @@ export class EntityManager {
         }
     }
 
-    public spawnEnemy(x: number, y: number, speed: number, hp: number): EnemyEntity {
+    public spawnEnemy(x: number, y: number, speed: number, hp: number, tint: number = 0xFF0000, size: number = 20): EnemyEntity {
         const enemy = this.enemyPool.get();
         enemy.active = true;
         enemy.transform.x = x;
@@ -129,9 +150,9 @@ export class EntityManager {
 
         if (enemy.view) {
             enemy.view.texture = Texture.WHITE;
-            enemy.view.tint = 0xFF0000;
-            enemy.view.width = 20;
-            enemy.view.height = 20;
+            enemy.view.tint = tint;
+            enemy.view.width = size;
+            enemy.view.height = size;
             
             enemy.view.x = x;
             enemy.view.y = y;
@@ -229,5 +250,26 @@ export class EntityManager {
         const index = this.effects.indexOf(effect);
         if (index !== -1) this.effects.splice(index, 1);
         this.effectPool.release(effect);
+    }
+
+    public spawnTextEffect(x: number, y: number, textStr: string): void {
+        const text = new Text(textStr, {
+            fontFamily: 'Arial',
+            fontSize: 16,
+            fill: 0x00FFFF,
+            fontWeight: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3
+        });
+        text.anchor.set(0.5);
+        text.x = x;
+        text.y = y;
+        this.container.addChild(text);
+        
+        this.textEffects.push({
+            view: text,
+            age: 0,
+            lifeTime: 800 // 800ms fade out
+        });
     }
 }
