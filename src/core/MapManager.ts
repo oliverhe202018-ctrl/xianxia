@@ -5,12 +5,15 @@ import { InputManager } from './InputManager';
 
 export class MapManager {
     public view: Container;
+    public bgLayer: Container;
     public bgSprite!: TilingSprite;
     
     private portals: { view: Graphics, type: 'start' | 'end', time: number }[] = [];
 
     constructor() {
         this.view = new Container();
+        this.view.sortableChildren = true;
+        this.bgLayer = new Container();
         // 初始不在此调用 renderMap，留给外部基于等级生成
         this.renderMap();
     }
@@ -45,12 +48,12 @@ export class MapManager {
         this.portals = [];
 
         // 1. 全屏滚动的修仙风背景
-        const bgTexture = Assets.get('bg') as Texture;
-        if (bgTexture) {
-            this.bgSprite = new TilingSprite(bgTexture, GAME.WIDTH, GAME.HEIGHT);
-            this.bgSprite.x = -this.view.x;
-            this.bgSprite.y = -this.view.y;
-            this.view.addChild(this.bgSprite);
+        if (!this.bgSprite) {
+            const bgTexture = Assets.get('bg') as Texture;
+            if (bgTexture) {
+                this.bgSprite = new TilingSprite(bgTexture, GAME.WIDTH, GAME.HEIGHT);
+                this.bgLayer.addChild(this.bgSprite);
+            }
         }
 
         const grassTex = Assets.get('grass');

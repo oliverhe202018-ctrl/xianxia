@@ -52,7 +52,6 @@ export class GameUI {
         this.mainUILayer.eventMode = 'none';
         this.mainUILayer.interactive = false;
         (this.mainUILayer as any).hitArea = null;
-        this.view.addChild(this.mainUILayer);
 
         // 只有实际可点击的按钮容器保留交互能力
         this.statusBarContainer.eventMode = 'passive';
@@ -263,6 +262,7 @@ export class GameUI {
         overlay.endFill();
         overlay.eventMode = 'static';
         overlay.zIndex = 9999;
+        overlay.sortableChildren = true;
 
         const marbleBorder = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
         marbleBorder.name = 'LobbyMarbleFrame';
@@ -307,6 +307,7 @@ export class GameUI {
 
         btn.on('pointerdown', () => {
             this.view.removeChild(overlay);
+            overlay.destroy({ children: true });
             onStart();
         });
 
@@ -329,17 +330,17 @@ export class GameUI {
         const welfarePanel = new WelfarePanel(mockData);
         welfarePanel.zIndex = 10000;
         welfarePanel.visible = false;
-        this.view.addChild(welfarePanel);
+        overlay.addChild(welfarePanel);
 
         const dailyPanel = new DailyQuestPanel();
         dailyPanel.zIndex = 10000;
         dailyPanel.visible = false;
-        this.view.addChild(dailyPanel);
+        overlay.addChild(dailyPanel);
 
         const puzzlePanel = new SecretRealmPanel();
         puzzlePanel.zIndex = 10000;
         puzzlePanel.visible = false;
-        this.view.addChild(puzzlePanel);
+        overlay.addChild(puzzlePanel);
 
         eventNames.forEach((name, index) => {
             const eventBtn = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);

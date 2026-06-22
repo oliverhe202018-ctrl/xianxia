@@ -63,22 +63,39 @@ async function main(): Promise<void> {
   const targetingSystem = new TargetingSystem(towerManager, entityManager);
   const combatSystem = new CombatSystem(towerManager, entityManager);
 
-  mapManager.view.zIndex = 0;
-  entityManager.container.zIndex = 10;
-  towerManager.container.zIndex = 20;
-  towerManager.uiContainer.zIndex = 30;
-  gameUI.view.zIndex = 40;
-  InputManager.getInstance().dragLayer.zIndex = 50;
+  // ── 全局 4 阶 zIndex 层级树重构 ──────────────────────────────────────────────
+  // Tier 1 (最底层): 全屏环境背景图
+  mapManager.bgLayer.zIndex = 0;
+  
+  // Tier 2 (装饰层): 纯装饰性 UI（如大理石边框），防止遮挡游戏操作
+  gameUI.mainUILayer.zIndex = 10;
+  
+  // Tier 3 (游戏层): 实体、塔防、地图格子
+  mapManager.view.zIndex = 50;
+  entityManager.container.zIndex = 50;
+  towerManager.container.zIndex = 50;
+  
+  // Tier 4 (交互UI层): 塔防UI、全局UI按钮等，确保可点击
+  towerManager.uiContainer.zIndex = 100;
+  gameUI.view.zIndex = 100;
+  
+  // Tier 5 (拖拽层): 拖拽组件必须在绝对顶层
+  InputManager.getInstance().dragLayer.zIndex = 999;
   InputManager.getInstance().dragLayer.name = 'DragLayer';
 
   const mapOffsetX = (GAME.WIDTH - 15 * 40) / 2;
   const mapOffsetY = (GAME.HEIGHT - 10 * 40) / 2 + 40;
 
+  // Tier 3 游戏层需要偏移，对齐地图居中
   mapManager.view.position.set(mapOffsetX, mapOffsetY);
   entityManager.container.position.set(mapOffsetX, mapOffsetY);
   towerManager.container.position.set(mapOffsetX, mapOffsetY);
+  // towerUI 层跟随偏移，确保插槽对应正确
   towerManager.uiContainer.position.set(mapOffsetX, mapOffsetY);
 
+  // 严格挂载各层
+  app.stage.addChild(mapManager.bgLayer);
+  app.stage.addChild(gameUI.mainUILayer);
   app.stage.addChild(mapManager.view);
   app.stage.addChild(entityManager.container);
   app.stage.addChild(towerManager.container);
