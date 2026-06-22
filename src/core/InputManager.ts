@@ -69,6 +69,7 @@ export class InputManager {
                 if (gameState.spendStones(5)) {
                     MAP_GRID[row][col] = 0; 
                     EventBus.emit('tile:cleared', { row, col });
+                    EventBus.emit('shovel:used', undefined as any);
                     
                     this.playShatterEffect(tileSprite);
                     tileSprite.texture = Assets.get('grass');

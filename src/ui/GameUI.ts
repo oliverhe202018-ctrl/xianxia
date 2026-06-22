@@ -163,13 +163,16 @@ export class GameUI {
         btn.width = 120;
         btn.height = 50;
         btn.anchor.set(0.5);
-        btn.position.set(400, 500);
+        // ★ 修复：移到右下角——底部导航栏最右侧槽位
+        const slotX = GAME.WIDTH - 50;
+        const slotY = GAME.HEIGHT - 40;
+        btn.position.set(slotX, slotY);
 
         // 按钮文案从按钮 Sprite 内剥离，避免文案成为边框/按钮子树中的命中歧义节点
         const label = new Text('聚灵', TextStyles.Title);
         label.name = 'GatherSpiritButtonLabel';
         label.anchor.set(0.5);
-        label.position.set(btn.x, btn.y);
+        label.position.set(slotX, slotY);
         label.eventMode = 'none';
 
         // 仅按钮本体可点击
@@ -231,13 +234,50 @@ export class GameUI {
         const btn = new Sprite(Assets.get('shovel'));
         btn.name = 'ShovelButton';
         btn.anchor.set(0.5);
-        btn.position.set(700, 500);
+        const slotX = GAME.WIDTH - 120;
+        const slotY = GAME.HEIGHT - 40;
+        btn.position.set(slotX, slotY);
         btn.width = 64;
         btn.height = 64;
         
-        btn.eventMode = 'static';
+        btn.visible = false;
+        btn.eventMode = 'none';
         btn.interactive = true;
         btn.cursor = 'pointer';
+
+        // 数量角标
+        const countBadge = new Text('0', {
+            fontSize: 16, fill: 0xFF4444, fontWeight: 'bold',
+            stroke: '#000000', strokeThickness: 3
+        });
+        countBadge.name = 'ShovelCountBadge';
+        countBadge.anchor.set(0.5);
+        countBadge.position.set(slotX + 24, slotY - 24);
+        countBadge.visible = false;
+        countBadge.eventMode = 'none';
+
+        let shovelCount = 0;
+
+        EventBus.on('gacha:result', (result: any) => {
+            if (result.item?.type === 'shovel' || result.type === 'shovel') {
+                shovelCount++;
+                btn.visible = true;
+                btn.eventMode = 'static';
+                countBadge.visible = shovelCount > 1;
+                countBadge.text = String(shovelCount);
+            }
+        });
+
+        EventBus.on('shovel:used', () => {
+            shovelCount = Math.max(0, shovelCount - 1);
+            if (shovelCount === 0) {
+                btn.visible = false;
+                btn.eventMode = 'none';
+                countBadge.visible = false;
+            } else {
+                countBadge.text = String(shovelCount);
+            }
+        });
 
         btn.on('pointerdown', () => {
             btn.width = 56;
@@ -256,6 +296,7 @@ export class GameUI {
         InputManager.getInstance().bindShovelButton(btn);
 
         this.shovelToolContainer.addChild(btn);
+        this.shovelToolContainer.addChild(countBadge);
     }
 
     public showLobby(onStart: () => void) {
@@ -265,10 +306,12 @@ export class GameUI {
             existing.destroy({ children: true });
         }
 
+        this.overlayLayer.eventMode = 'none';
+
         const overlay = new Graphics();
         overlay.name = 'LobbyOverlay';
         overlay.beginFill(0x000000, 0.85);
-        overlay.drawRect(-2000, -2000, 5000, 5000);
+        overlay.drawRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
         overlay.endFill();
         overlay.eventMode = 'static';
         overlay.zIndex = 9999;
@@ -407,15 +450,18 @@ export class GameUI {
     public showGameOver(onRestart: () => void, onBackToLobby: () => void) {
         const gameOverPanel = new GameOverPanel(
             () => {
-                this.view.removeChild(gameOverPanel);
+                this.overlayLayer.removeChild(gameOverPanel);
+                this.overlayLayer.eventMode = 'none';
                 onRestart();
             },
             () => {
-                this.view.removeChild(gameOverPanel);
+                this.overlayLayer.removeChild(gameOverPanel);
+                this.overlayLayer.eventMode = 'none';
                 onBackToLobby();
             }
         );
         gameOverPanel.zIndex = 10000;
-        this.view.addChild(gameOverPanel);
+        this.overlayLayer.addChild(gameOverPanel);
+        this.overlayLayer.eventMode = 'static';
     }
 }

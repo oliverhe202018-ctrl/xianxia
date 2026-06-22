@@ -12,6 +12,7 @@ export interface GameEventMap {
     'puzzle:start': { config: any };
     'task:updated': { taskId: string };
     'welfare:claim': number;
+    'shovel:used': void;
 }
 
 type EventCallback<T> = (data: T) => void;
