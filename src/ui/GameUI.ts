@@ -5,6 +5,7 @@ import { EventBus } from '../core/EventBus';
 import { GameState } from '../core/GameState';
 import { GameOverPanel } from './panels/GameOverPanel';
 import { UIManager } from './UIManager';
+import { GAME } from '../config/game';
 
 // 统一字体样式表 (配置全局渲染参数)
 export const TextStyles = {

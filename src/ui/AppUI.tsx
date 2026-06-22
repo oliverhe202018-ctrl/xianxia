@@ -15,12 +15,18 @@ const panelRegistry: Record<string, React.FC<any>> = {
 };
 
 export const AppUI: React.FC = () => {
-    const [panels, setPanels] = useState<UIConfig[]>(UIManager.getInstance().getStack());
+    const initialStack = UIManager.getInstance().getStack();
+    console.log('[AppUI] Initializing panels with stack:', initialStack);
+    const [panels, setPanels] = useState<UIConfig[]>(initialStack);
 
     useEffect(() => {
         const uiManager = UIManager.getInstance();
 
+        // 挂载后立刻同步一次最新状态，防止 render 和 useEffect 之间漏掉事件
+        setPanels(uiManager.getStack());
+
         const handleStackChanged = (newStack: UIConfig[]) => {
+            console.log('[AppUI] Received stack_changed event. New stack:', newStack);
             setPanels(newStack);
         };
 
