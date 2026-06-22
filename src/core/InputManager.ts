@@ -1,13 +1,16 @@
 import { Container, Sprite, FederatedPointerEvent, Assets, Text } from 'pixi.js';
 import { GameState } from './GameState';
 import { MAP_GRID } from '../config/MapConfig';
+import { GameModeAdapter } from '../systems/GameModeAdapter';
 import { GachaSystem } from '../systems/GachaSystem';
 import { UserStore } from '../store/UserStore';
+import { EventBus } from '../core/EventBus';
 
 export enum InteractionState {
     IDLE = 'IDLE',
     DRAGGING = 'DRAGGING',
-    SHOVELING = 'SHOVELING'
+    SHOVELING = 'SHOVELING',
+    NONE = 'NONE'
 }
 
 export class InputManager {
@@ -52,6 +55,12 @@ export class InputManager {
         e.stopPropagation(); 
 
         if (this.currentState === InteractionState.SHOVELING) {
+            if (!GameModeAdapter.getInstance().canUseShovel()) {
+                // 不允许使用铲子
+                this.setState(InteractionState.NONE);
+                return;
+            }
+
             const cellType = MAP_GRID[row][col];
             
             if (cellType === 2) {
@@ -59,6 +68,7 @@ export class InputManager {
                 
                 if (gameState.spendStones(5)) {
                     MAP_GRID[row][col] = 0; 
+                    EventBus.emit('tile:cleared', { row, col });
                     
                     this.playShatterEffect(tileSprite);
                     tileSprite.texture = Assets.get('grass');

@@ -3,6 +3,9 @@ import { UICoordSystem } from '../utils/UICoordSystem';
 import { InputManager } from '../core/InputManager';
 import { EventBus } from '../core/EventBus';
 import { GameState } from '../core/GameState';
+import { WelfarePanel, SignState } from './panels/WelfarePanel';
+import { DailyQuestPanel } from './panels/DailyQuestPanel';
+import { SecretRealmPanel } from './panels/SecretRealmPanel';
 
 // 统一字体样式表 (配置全局渲染参数)
 export const TextStyles = {
@@ -205,6 +208,84 @@ export class GameUI {
         });
 
         overlay.addChild(btn);
+
+        // --- 新增：玩法和活动入口 (垂直列表，置于大理石边框右侧区域) ---
+        const eventNames = ['每日活动', '限时秘境', '斗法大会', '福利'];
+        const startY = 160;
+        const btnHeight = 45;
+        const spacing = 15;
+
+        eventNames.forEach((name, index) => {
+            // 使用玉石背景样式 (复用 uiPanel)
+            const eventBtn = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
+            eventBtn.width = 140;
+            eventBtn.height = btnHeight;
+            // 定位在中心偏右
+            eventBtn.position.set(480, startY + index * (btnHeight + spacing));
+            eventBtn.eventMode = 'static';
+            eventBtn.cursor = 'pointer';
+
+            const eventLabel = new Text(name, { 
+                fontFamily: ['"Microsoft YaHei"', 'sans-serif'], 
+                fontSize: 18, 
+                fill: 0xDAA520, // 金色字体
+                fontWeight: 'bold',
+                dropShadow: true,
+                dropShadowColor: '#000000',
+                dropShadowDistance: 1
+            });
+            eventLabel.anchor.set(0.5);
+            eventLabel.position.set(eventBtn.width / 2, eventBtn.height / 2);
+            eventBtn.addChild(eventLabel);
+
+            // 绑定交互事件
+            eventBtn.on('pointerdown', () => {
+                if (name === '福利') {
+                    console.log(`[大厅入口点击]: 弹出${name}面板`);
+                    
+                    // 模拟玩家的7日签到数据
+                    const mockData = [
+                        { day: 1, state: SignState.SIGNED, rewardDesc: '灵石x100' },
+                        { day: 2, state: SignState.AVAILABLE, rewardDesc: '灵石x200' },
+                        { day: 3, state: SignState.LOCKED, rewardDesc: '灵石x300' },
+                        { day: 4, state: SignState.LOCKED, rewardDesc: '无字天书x1' },
+                        { day: 5, state: SignState.LOCKED, rewardDesc: '灵石x500' },
+                        { day: 6, state: SignState.LOCKED, rewardDesc: '灵石x600' },
+                        { day: 7, state: SignState.LOCKED, rewardDesc: '无字天书x3' }
+                    ];
+
+                    const welfarePanel = new WelfarePanel(mockData, () => {
+                        console.log('福利面板已关闭');
+                    });
+                    
+                    welfarePanel.zIndex = 10000; // 确保在 lobby overlay (9999) 之上
+                    
+                    welfarePanel.zIndex = 10000;
+                    this.view.addChild(welfarePanel);
+                } else if (name === '每日活动') {
+                    console.log(`[大厅入口点击]: 弹出${name}面板`);
+                    const dailyPanel = new DailyQuestPanel(() => console.log('每日活动面板已关闭'));
+                    dailyPanel.zIndex = 10000;
+                    this.view.addChild(dailyPanel);
+                } else if (name === '限时秘境') {
+                    console.log(`[大厅入口点击]: 弹出${name}面板`);
+                    const puzzlePanel = new SecretRealmPanel(() => console.log('限时秘境面板已关闭'));
+                    puzzlePanel.zIndex = 10000;
+                    this.view.addChild(puzzlePanel);
+                } else {
+                    console.log(`[大厅入口点击]: ${name}`);
+                }
+            });
+
+            // 添加缩小点击反馈
+            eventBtn.on('pointerdown', () => { eventBtn.scale.set(0.95); });
+            eventBtn.on('pointerup', () => { eventBtn.scale.set(1); });
+            eventBtn.on('pointerupoutside', () => { eventBtn.scale.set(1); });
+
+            overlay.addChild(eventBtn);
+        });
+        // -------------------------------------------------------------
+
         
         // 确保容器开启了排序
         this.view.sortableChildren = true;

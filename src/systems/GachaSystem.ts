@@ -3,7 +3,7 @@ import { EventBus } from '../core/EventBus';
 import { GameConfig, TowerCharName } from '../config/GameConfig';
 import { GameState } from '../core/GameState';
 import { UserStore } from '../store/UserStore';
-
+import { GameModeAdapter } from './GameModeAdapter';
 // 模拟 PrismaClient 以防本地未连接真实库时报错
 const prisma = {
     $transaction: async (queries: any[]) => {
@@ -39,6 +39,11 @@ export class GachaSystem {
     }
 
     private handleGachaRequest = (data: { amount: number }) => {
+        // 解谜模式拦截
+        if (GameModeAdapter.getInstance().interceptGacha()) {
+            return;
+        }
+
         const totalCost = GameConfig.Gacha.cost * data.amount;
         if (GameState.getInstance().spendStones(totalCost)) {
             for (let i = 0; i < data.amount; i++) {

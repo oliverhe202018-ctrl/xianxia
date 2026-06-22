@@ -1,7 +1,8 @@
 import { TowerManager } from '../core/TowerManager';
 import { EntityManager } from '../core/EntityManager';
 import { GameState } from '../core/GameState';
-import { UserStore } from '../store/UserStore'; // 引入用户仓库
+import { UserStore } from '../store/UserStore';
+import { EventBus } from '../core/EventBus'; // 引入用户仓库
 import { EquipmentStore } from '../store/EquipmentStore'; // 引入装备库
 import { AttackContext } from '../types/Rune';
 import { ModifierRegistry } from './modifiers/ModifierRegistry';
@@ -235,6 +236,7 @@ export class CombatSystem {
         
         if (enemy.health.current <= 0) {
             enemy.active = false;
+            EventBus.emit('combat:kill', { enemyId: enemy.id });
             this.entityManager.spawnEffect(enemy.transform.x, enemy.transform.y, 'death');
             
             const isVip = UserStore.getInstance().getIsVip();
