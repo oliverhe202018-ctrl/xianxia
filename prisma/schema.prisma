@@ -1,0 +1,43 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String          @id @default(uuid())
+  level          Int             @default(1)
+  exp            Int             @default(0)
+  is_vip         Boolean         @default(false)
+  currency_gold  Int             @default(0) // 局外灵石/金币
+  
+  // 抽卡代币与保底计数
+  heavenly_scrolls   Int         @default(0) // 无字天书
+  gacha_pity_counter Int         @default(0) // 距离上次出极品的保底计数
+  
+  // 修仙境界属性
+  realm_id           Int         @default(1) // 1: 练气, 2: 筑基 ...
+  sub_level          Int         @default(1) // 1-9 层
+  cultivation_exp    Int         @default(0) // 当前阶层的修为(经验值)
+  breakthrough_pills Int         @default(0) // 渡劫丹数量
+  
+  attributes     UserAttributes?
+  
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+}
+
+model UserAttributes {
+  id               String   @id @default(uuid())
+  user_id          String   @unique
+  user             User     @relation(fields: [user_id], references: [id])
+  
+  base_attack_buff Float    @default(0.0) // 全局攻击加成比例 (例如 0.2 表示 20%)
+  starting_energy  Int      @default(100) // 局内初始灵气
+  
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+}
