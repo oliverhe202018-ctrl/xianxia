@@ -5,6 +5,12 @@ echo 'Killing hanging git processes...'
 killall git || true
 rm -rf /root/xianxia
 
+. ~/.bashrc || true
+. /etc/profile || true
+export http_proxy=http://127.0.0.1:7890
+export https_proxy=http://127.0.0.1:7890
+export all_proxy=socks5://127.0.0.1:7890
+
 vpsProjectPath="/root/xianxia"
 echo "=================================================="
 echo "Cloning repository directly from github..."

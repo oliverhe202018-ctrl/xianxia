@@ -107,7 +107,7 @@ export class WelfarePanel extends ModalWindow {
                 scale -= 0.05;
                 if (scale <= 1) {
                     scale = 1;
-                    EventBus.getInstance().emit('welfare:claim', day);
+                    EventBus.emit('welfare:claim', day);
                     // 在真实项目中，应该等待服务端返回后再刷新UI。这里模拟直接刷新当前面板
                     this.destroy({ children: true });
                     return;

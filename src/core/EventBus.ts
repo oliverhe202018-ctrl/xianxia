@@ -7,6 +7,11 @@ export interface GameEventMap {
     'level:start': { level: number };
     'game:over': void;
     'boss:phase_change': { enemyId: number, phase: string };
+    'tile:cleared': { row: number, col: number };
+    'combat:kill': { enemyId: number };
+    'puzzle:start': { config: any };
+    'task:updated': { taskId: string };
+    'welfare:claim': number;
 }
 
 type EventCallback<T> = (data: T) => void;

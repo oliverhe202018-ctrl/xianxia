@@ -1,4 +1,5 @@
 import { EntityManager } from '../core/EntityManager';
+import { TowerManager } from '../core/TowerManager';
 import { GameState } from '../core/GameState';
 import { GameConfig } from '../config/GameConfig';
 import { UserStore } from '../store/UserStore';

@@ -1,1 +1,5 @@
-export class UICoordSystem {\n    static getTopRight(offsetX = 0, offsetY = 0) {\n        return { x: 800 - offsetX, y: offsetY };\n    }\n}\n
+export class UICoordSystem {
+    static getTopRight(offsetX = 0, offsetY = 0) {
+        return { x: 800 - offsetX, y: offsetY };
+    }
+}
