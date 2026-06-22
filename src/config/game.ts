@@ -10,7 +10,6 @@ export const GAME = {
   TARGET_FPS: 60,
   /** Pixi.js 应用配置 */
   APP_OPTIONS: {
-    resizeTo: window,
     backgroundColor: 0x1a1a2e,
     antialias: true,
     resolution: window.devicePixelRatio || 1,

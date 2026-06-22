@@ -157,27 +157,34 @@ export class GameUI {
 
     // 构建带 Yoyo 缩放缓动反馈的“聚灵”按钮
     private createJuLingButton() {
-        const btn = new Sprite(Assets.get('uiPanel'));
-        btn.name = 'GatherSpiritButton';
+        const container = new Container();
+        container.name = 'GatherSpiritButtonContainer';
+        
+        const slotX = GAME.WIDTH - 70;
+        const slotY = GAME.HEIGHT - 40;
+        container.position.set(slotX, slotY);
+
+        const btn = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
+        btn.name = 'GatherSpiritButtonBg';
         btn.width = 120;
         btn.height = 50;
-        btn.anchor.set(0.5);
-        // ★ 修复：移到右下角——底部导航栏最右侧槽位
-        const slotX = GAME.WIDTH - 50;
-        const slotY = GAME.HEIGHT - 40;
-        btn.position.set(slotX, slotY);
+        btn.pivot.set(60, 25); // 设置中心轴点，使其类似于 anchor(0.5)
 
-        // 按钮文案从按钮 Sprite 内剥离，避免文案成为边框/按钮子树中的命中歧义节点
         const label = new Text('聚灵', TextStyles.Title);
         label.name = 'GatherSpiritButtonLabel';
         label.anchor.set(0.5);
-        label.position.set(slotX, slotY);
+        label.position.set(0, 0); // 相对 container 居中
         label.eventMode = 'none';
 
-        // 仅按钮本体可点击
-        btn.eventMode = 'static';
-        btn.interactive = true;
-        btn.cursor = 'pointer';
+        // 将组件挂载到可以缩放的 Container
+        container.addChild(btn);
+        container.addChild(label);
+        label.eventMode = 'none';
+
+        // 仅 container 响应点击事件
+        container.eventMode = 'static';
+        container.interactive = true;
+        container.cursor = 'pointer';
 
         let isOnCooldown = false;
         
@@ -185,13 +192,13 @@ export class GameUI {
         cooldownRing.name = 'GatherSpiritCooldownRing';
         cooldownRing.visible = false;
         cooldownRing.eventMode = 'none';
-        btn.addChild(cooldownRing);
+        container.addChild(cooldownRing);
 
-        btn.on('pointerdown', (e) => {
+        container.on('pointerdown', (e) => {
             e.stopPropagation();
             if (isOnCooldown) return;
 
-            btn.scale.set(0.9);
+            container.scale.set(0.9);
             EventBus.emit('gacha:request', { amount: 1 });
 
             isOnCooldown = true;
@@ -206,7 +213,7 @@ export class GameUI {
                     isOnCooldown = false;
                     cooldownRing.visible = false;
                     cooldownRing.clear();
-                    btn.scale.set(1.0);
+                    container.scale.set(1.0);
                 } else {
                     const ratio = elapsed / cooldownTime;
                     cooldownRing.clear();
@@ -218,15 +225,14 @@ export class GameUI {
             requestAnimationFrame(animateCooldown);
         });
         
-        btn.on('pointerup', () => {
-            if (!isOnCooldown) btn.scale.set(1.0);
+        container.on('pointerup', () => {
+            if (!isOnCooldown) container.scale.set(1.0);
         });
-        btn.on('pointerupoutside', () => {
-            if (!isOnCooldown) btn.scale.set(1.0);
+        container.on('pointerupoutside', () => {
+            if (!isOnCooldown) container.scale.set(1.0);
         });
         
-        this.gatherSpiritButtonContainer.addChild(btn);
-        this.gatherSpiritButtonContainer.addChild(label);
+        this.gatherSpiritButtonContainer.addChild(container);
     }
 
     private createShovelButton() {
