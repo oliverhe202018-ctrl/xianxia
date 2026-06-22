@@ -39,9 +39,8 @@ export const AppUI: React.FC = () => {
                 const PanelComponent = panelRegistry[config.panelId];
                 if (!PanelComponent) return null;
 
-                // 只有顶层并且是 modal 的面板才会拦截点击
-                const isTop = index === panels.length - 1;
-                const pointerEvents = (isTop && config.isModal) ? 'auto' : 'none';
+                // 修复：永远由外层透传，交由具体面板(PanelComponent)自身判断是否阻断点击
+                const pointerEvents = 'none';
 
                 return (
                     <div 

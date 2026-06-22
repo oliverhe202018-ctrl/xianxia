@@ -14,6 +14,16 @@ import { AssetLoader } from './utils/AssetLoader';
 import { GameUI } from './ui/GameUI';
 import { InputManager } from './core/InputManager';
 import { EventBus } from './core/EventBus';
+import { GachaSystem } from './systems/GachaSystem';
+
+// ★ HMR 防污染：重置所有单例
+if ((import.meta as any).hot) {
+    (import.meta as any).hot.dispose(() => {
+        EventBus.clear();                     // 清空所有事件监听
+        GachaSystem.resetInstance();          // 销毁 GachaSystem
+        GameState.getInstance().setPhase(GamePhase.LOBBY); // 重置状态
+    });
+}
 
 async function main(): Promise<void> {
   const userStore = UserStore.getInstance();
@@ -83,6 +93,9 @@ async function main(): Promise<void> {
   InputManager.getInstance().dragLayer.zIndex = 999;
   InputManager.getInstance().dragLayer.name = 'DragLayer';
 
+  // Tier 6 (全局遮罩层): 最高层级，用于大厅及全屏遮挡
+  gameUI.overlayLayer.zIndex = 9000;
+
   const mapOffsetX = (GAME.WIDTH - 15 * 40) / 2;
   const mapOffsetY = (GAME.HEIGHT - 10 * 40) / 2 + 40;
 
@@ -102,6 +115,7 @@ async function main(): Promise<void> {
   app.stage.addChild(towerManager.uiContainer);
   app.stage.addChild(gameUI.view);
   app.stage.addChild(InputManager.getInstance().dragLayer);
+  app.stage.addChild(gameUI.overlayLayer);
 
   const startGame = () => {
     GameState.getInstance().resetGame(userStore.getStartingEnergy());
@@ -113,6 +127,7 @@ async function main(): Promise<void> {
     movementSystem.setWaypoints(newWaypoints);
   };
 
+  EventBus.clear('level:start');
   EventBus.on('level:start', (data: { level: number }) => {
     mapManager.generateLevelMap(data.level);
     const newWaypoints = mapManager.getWaypoints();
@@ -120,6 +135,7 @@ async function main(): Promise<void> {
     movementSystem.setWaypoints(newWaypoints);
   });
 
+  EventBus.clear('game:over');
   EventBus.on('game:over', () => {
     gameUI.showGameOver(
       () => { startGame(); },

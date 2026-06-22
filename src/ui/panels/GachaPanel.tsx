@@ -94,9 +94,10 @@ export const GachaPanel: React.FC = () => {
 };
 
 const modalStyle: React.CSSProperties = {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    width: '100%', height: '100%',
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
     pointerEvents: 'auto'
 };
 

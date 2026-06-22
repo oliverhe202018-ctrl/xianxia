@@ -97,6 +97,13 @@ export class GachaSystem {
         return GachaSystem.instance;
     }
 
+    public static resetInstance(): void {
+        if (GachaSystem.instance) {
+            GachaSystem.instance.destroy();
+            GachaSystem.instance = null as any;
+        }
+    }
+
     /**
      * 执行参悟（盲盒开箱）
      * 完全解耦表现层：返回 Promise 供 UI await，并在其间完成所有动画播放。

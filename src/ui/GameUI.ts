@@ -34,6 +34,7 @@ export class GameUI {
     public gatherSpiritButtonContainer: Container = new Container();
     public shovelToolContainer: Container = new Container();
     public bottomNavigationContainer: Container = new Container();
+    public overlayLayer: Container = new Container();
 
     constructor() {
         this.view.name = 'GameUIRoot';
@@ -42,6 +43,9 @@ export class GameUI {
         this.gatherSpiritButtonContainer.name = 'GatherSpiritButtonLayer';
         this.shovelToolContainer.name = 'ShovelButtonLayer';
         this.bottomNavigationContainer.name = 'BottomNavigationLayer';
+        this.overlayLayer.name = 'OverlayLayer';
+        this.overlayLayer.sortableChildren = true;
+        this.overlayLayer.eventMode = 'none';
 
         // 根容器绝不参与 hit test，避免全屏 UI 容器抢事件
         this.view.eventMode = 'none';
@@ -255,6 +259,12 @@ export class GameUI {
     }
 
     public showLobby(onStart: () => void) {
+        const existing = this.overlayLayer.getChildByName('LobbyOverlay');
+        if (existing) {
+            this.overlayLayer.removeChild(existing);
+            existing.destroy({ children: true });
+        }
+
         const overlay = new Graphics();
         overlay.name = 'LobbyOverlay';
         overlay.beginFill(0x000000, 0.85);
@@ -306,8 +316,9 @@ export class GameUI {
         btn.addChild(label);
 
         btn.on('pointerdown', () => {
-            this.view.removeChild(overlay);
+            this.overlayLayer.removeChild(overlay);
             overlay.destroy({ children: true });
+            this.overlayLayer.eventMode = 'none';
             onStart();
         });
 
@@ -389,7 +400,8 @@ export class GameUI {
         });
 
         this.view.sortableChildren = true;
-        this.view.addChild(overlay);
+        this.overlayLayer.addChild(overlay);
+        this.overlayLayer.eventMode = 'static';
     }
 
     public showGameOver(onRestart: () => void, onBackToLobby: () => void) {

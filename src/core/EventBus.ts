@@ -35,6 +35,14 @@ class EventBusImpl {
         this.handlers[event] = (this.handlers[event] as any).filter((h: any) => h !== handler);
     }
 
+    clear(event?: keyof GameEventMap): void {
+        if (event) {
+            delete this.handlers[event];
+        } else {
+            this.handlers = {};
+        }
+    }
+
     emit<K extends keyof GameEventMap>(event: K, data: GameEventMap[K]): void {
         if (!this.handlers[event]) return;
         this.handlers[event]!.forEach(handler => handler(data));
