@@ -13,7 +13,7 @@ export const GAME = {
     resizeTo: window,
     backgroundColor: 0x1a1a2e,
     antialias: true,
-    resolution: 'auto',
+    resolution: window.devicePixelRatio || 1,
     autoDensity: true,
-  } as const,
+  }
 } as const;
