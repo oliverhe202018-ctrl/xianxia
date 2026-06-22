@@ -1,4 +1,6 @@
-export class UserStore {
+import { EventEmitter } from '../utils/EventEmitter';
+
+export class UserStore extends EventEmitter {
     private static instance: UserStore;
 
     // 缓存的用户基础数据
@@ -9,8 +11,17 @@ export class UserStore {
     // 局外属性加成
     private baseAttackBuff: number = 0.0;
     private startingEnergy: number = 100;
+    
+    // 资产
+    private heavenly_scrolls: number = 10; // 给默认 10 个测试用
+    private currency_gold: number = 1000;
+    private pityCounter: number = 0;
+    private realmName: string = '练气一层';
+    private exp: number = 0;
 
-    private constructor() {}
+    private constructor() {
+        super();
+    }
 
     public static getInstance(): UserStore {
         if (!UserStore.instance) {
@@ -46,7 +57,29 @@ export class UserStore {
         return this.startingEnergy;
     }
 
-    public getIsVip(): boolean {
-        return this.isVip;
+    public getUserId(): string { return this.userId; }
+    public getLevel(): number { return this.level; }
+    public getExp(): number { return this.exp; }
+    public getRealmName(): string { return this.realmName; }
+    public getHeavenlyScrolls(): number { return this.heavenly_scrolls; }
+    public getPityCounter(): number { return this.pityCounter; }
+
+    public addHeavenlyScrolls(amount: number): void {
+        this.heavenly_scrolls += amount;
+        this.emit('update');
+    }
+
+    public deductHeavenlyScrolls(amount: number): boolean {
+        if (this.heavenly_scrolls >= amount) {
+            this.heavenly_scrolls -= amount;
+            this.emit('update');
+            return true;
+        }
+        return false;
+    }
+
+    public setPityCounter(val: number): void {
+        this.pityCounter = val;
+        this.emit('update');
     }
 }

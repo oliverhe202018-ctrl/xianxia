@@ -183,11 +183,16 @@ export class CombatSystem {
                     }
                 } else if (p.type === 'fire') {
                     this.entityManager.spawnEffect(p.transform.x, p.transform.y, 'explosion', p.aoeRadius);
-                    for (const enemy of enemies) {
-                        if (!enemy.active) continue;
-                        const edx = enemy.transform.x - p.transform.x;
-                        const edy = enemy.transform.y - p.transform.y;
-                        if (Math.sqrt(edx*edx + edy*edy) <= p.aoeRadius) {
+                    
+                    const nearbyEnemies = this.entityManager.spatialHash.queryRange(
+                        p.transform.x, 
+                        p.transform.y, 
+                        p.aoeRadius
+                    );
+
+                    for (const entity of nearbyEnemies) {
+                        const enemy = entity as any;
+                        if (enemy.active) {
                             this.damageEnemy(enemy, p.damage);
                         }
                     }

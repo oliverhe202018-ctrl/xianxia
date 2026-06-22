@@ -50,6 +50,9 @@ export class MovementSystem {
                 enemy.view.x = enemy.transform.x;
                 enemy.view.y = enemy.transform.y;
             }
+
+            // 同步空间哈希网格状态
+            this.entityManager.spatialHash.update(enemy as any);
         }
     }
 }

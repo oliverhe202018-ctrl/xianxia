@@ -24,14 +24,13 @@ export class TargetingSystem {
             let bestTarget: EnemyEntity | null = null;
             let highestWaypoint = -1;
 
-            for (const enemy of enemies) {
-                const dx = enemy.transform.x - tower.view.x;
-                const dy = enemy.transform.y - tower.view.y;
-                const distSq = dx * dx + dy * dy;
+            const nearbyEnemies = this.entityManager.spatialHash.queryRange(tower.view.x, tower.view.y, radius);
 
-                // 判断是否在攻击圆范围内
-                if (distSq <= radius * radius) {
-                    const wpIndex = enemy.pathFollower.waypointIndex;
+            for (const entity of nearbyEnemies) {
+                const enemy = entity as EnemyEntity;
+                if (!enemy.active) continue;
+
+                const wpIndex = enemy.pathFollower.waypointIndex;
                     
                     // 优先级 1：寻路点索引最大（最接近终点）
                     if (wpIndex > highestWaypoint) {

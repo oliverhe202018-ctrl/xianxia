@@ -9,11 +9,15 @@ import { TargetingSystem } from './systems/TargetingSystem';
 import { CombatSystem } from './systems/CombatSystem';
 import { UserStore } from './store/UserStore';
 import { GameState } from './core/GameState';
+import { initUI } from './ui/initUI';
 
 async function main(): Promise<void> {
   // ── 局外配置初始化 ──────────────────────────────────────────────
   const userStore = UserStore.getInstance();
   await userStore.fetchUserData(); // 异步拉取用户数据
+  
+  // 初始化 React UI 层
+  initUI();
   
   // 局内数据注入
   GameState.getInstance().setStones(userStore.getStartingEnergy());

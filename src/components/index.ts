@@ -23,7 +23,7 @@ export interface EnemyEntity {
     velocity: Velocity;
     health: Health;
     pathFollower: PathFollower;
-    view?: import('pixi.js').Graphics;
+    view?: any;
 }
 
 export interface TowerEntity {
@@ -34,7 +34,7 @@ export interface TowerEntity {
     gridX: number;
     gridY: number;
     slotIndex: number;
-    view: import('pixi.js').Container;
+    view: any;
     
     // Combat fields
     targetId?: number;
@@ -51,7 +51,7 @@ export interface ProjectileEntity {
     targetPos?: { x: number, y: number };
     damage: number;
     aoeRadius: number; // 0 for single target
-    view?: import('pixi.js').Graphics;
+    view?: any;
 }
 
 export interface EffectEntity {
@@ -60,5 +60,5 @@ export interface EffectEntity {
     transform: Transform;
     lifeTime: number; // ms
     age: number; // ms
-    view?: import('pixi.js').Graphics;
+    view?: any;
 }

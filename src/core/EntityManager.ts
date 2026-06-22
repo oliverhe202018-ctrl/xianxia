@@ -1,6 +1,7 @@
 import { ObjectPool } from '../utils/ObjectPool';
-import { Graphics, Container } from 'pixi.js';
+import { Container, ParticleContainer, Sprite, Texture, Graphics } from 'pixi.js';
 import { EnemyEntity, ProjectileEntity, EffectEntity } from '../components';
+import { SpatialHash } from '../utils/SpatialHash';
 
 export class EntityManager {
     public enemies: EnemyEntity[] = [];
@@ -13,9 +14,23 @@ export class EntityManager {
     
     private nextId: number = 1;
     public container: Container;
+    public particleContainer: ParticleContainer;
+    public spatialHash: SpatialHash;
 
     constructor() {
         this.container = new Container();
+        
+        // 【核心】开启对 position, rotation, tint 的批量同步
+        this.particleContainer = new ParticleContainer(2000, {
+            position: true,
+            rotation: true,
+            tint: true,
+            uvs: false,
+            vertices: false
+        });
+        this.container.addChild(this.particleContainer);
+
+        this.spatialHash = new SpatialHash(50); // 50 pixels per cell
         
         this.enemyPool = new ObjectPool<EnemyEntity>(
             () => this.createEnemyObj(),
@@ -34,7 +49,12 @@ export class EntityManager {
     }
 
     private createEnemyObj(): EnemyEntity {
-        const view = new Graphics();
+        // 【降级】彻底弃用 Graphics，改用基于内部预设纹理的轻量 Sprite
+        const view = new Sprite(Texture.WHITE);
+        view.anchor.set(0.5);
+        view.width = 20;
+        view.height = 20;
+        
         return {
             id: this.nextId++,
             active: false,
@@ -47,7 +67,9 @@ export class EntityManager {
     }
 
     private createProjectileObj(): ProjectileEntity {
-        const view = new Graphics();
+        const view = new Sprite(Texture.WHITE);
+        view.anchor.set(0.5);
+
         return {
             id: this.nextId++,
             active: false,
@@ -74,11 +96,24 @@ export class EntityManager {
 
     private resetEntity(entity: any): void {
         entity.active = false;
-        if (entity.view && entity.view.parent) {
-            entity.view.parent.removeChild(entity.view);
-        }
-        if (entity.view instanceof Graphics) {
-            entity.view.clear();
+        
+        if (entity.view) {
+            // 1. 从物理渲染树中剥离
+            if (entity.view.parent) {
+                entity.view.parent.removeChild(entity.view);
+            }
+            
+            // 2. 针对遗留 Graphics 的处理
+            if (typeof entity.view.clear === 'function') {
+                entity.view.clear();
+            }
+
+            // 3. 针对 Sprite 的纹理引用断开 (防止内存泄漏)
+            if (entity.view instanceof Sprite) {
+                entity.view.texture = Texture.EMPTY; 
+                entity.view.rotation = 0;
+                entity.view.scale.set(1);
+            }
         }
     }
 
@@ -93,22 +128,26 @@ export class EntityManager {
         enemy.pathFollower.waypointIndex = 1;
 
         if (enemy.view) {
-            enemy.view.beginFill(0xFF0000); 
-            enemy.view.drawCircle(0, 0, 10);
-            enemy.view.endFill();
+            enemy.view.texture = Texture.WHITE;
+            enemy.view.tint = 0xFF0000;
+            enemy.view.width = 20;
+            enemy.view.height = 20;
             
             enemy.view.x = x;
             enemy.view.y = y;
-            this.container.addChild(enemy.view);
+            // 放入极速渲染容器
+            this.particleContainer.addChild(enemy.view);
         }
 
         this.enemies.push(enemy);
+        this.spatialHash.insert(enemy as any);
         return enemy;
     }
 
     public recycleEnemy(enemy: EnemyEntity): void {
         const index = this.enemies.indexOf(enemy);
         if (index !== -1) this.enemies.splice(index, 1);
+        this.spatialHash.remove(enemy as any);
         this.enemyPool.release(enemy);
     }
 
@@ -125,17 +164,20 @@ export class EntityManager {
         p.aoeRadius = aoeRadius;
 
         if (p.view) {
+            p.view.texture = Texture.WHITE;
             if (type === 'sword') {
-                p.view.beginFill(0x00FFFF); // 剑：蓝色
-                p.view.drawRect(-2, -8, 4, 16);
+                p.view.tint = 0x00FFFF; // 剑：蓝色
+                p.view.width = 4;
+                p.view.height = 16;
             } else {
-                p.view.beginFill(0xFF4500); // 火：红色
-                p.view.drawCircle(0, 0, 6);
+                p.view.tint = 0xFF4500; // 火：红色
+                p.view.width = 12;
+                p.view.height = 12;
             }
-            p.view.endFill();
             p.view.x = x;
             p.view.y = y;
-            this.container.addChild(p.view);
+            // 放入极速渲染容器
+            this.particleContainer.addChild(p.view);
         }
 
         this.projectiles.push(p);

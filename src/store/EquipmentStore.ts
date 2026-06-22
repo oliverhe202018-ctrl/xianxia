@@ -1,12 +1,16 @@
 import { Rune } from '../types/Rune';
+import { EventEmitter } from '../utils/EventEmitter';
 
-export class EquipmentStore {
+export class EquipmentStore extends EventEmitter {
     private static instance: EquipmentStore;
 
     // 6 个法印槽位，null 表示未装备
     private equippedRunes: (Rune | null)[] = Array(6).fill(null);
+    // 背包库存
+    private inventory: Rune[] = [];
 
     private constructor() {
+        super();
         // 为了验证战斗逻辑，这里预先注入两个模拟的强力法印
         this.equippedRunes[0] = {
             id: 'mock-rune-sword',
@@ -35,7 +39,15 @@ export class EquipmentStore {
      */
     public equipRune(slotIndex: number, rune: Rune): boolean {
         if (slotIndex < 0 || slotIndex >= 6) return false;
+        // 如果当前槽位有法印，先放回背包
+        if (this.equippedRunes[slotIndex]) {
+            this.inventory.push(this.equippedRunes[slotIndex]!);
+        }
+        // 从背包中移除
+        this.inventory = this.inventory.filter(r => r.id !== rune.id);
+        
         this.equippedRunes[slotIndex] = rune;
+        this.emit('update');
         return true;
     }
 
@@ -44,8 +56,26 @@ export class EquipmentStore {
      */
     public unequipRune(slotIndex: number): void {
         if (slotIndex >= 0 && slotIndex < 6) {
-            this.equippedRunes[slotIndex] = null;
+            const rune = this.equippedRunes[slotIndex];
+            if (rune) {
+                this.inventory.push(rune);
+                this.equippedRunes[slotIndex] = null;
+                this.emit('update');
+            }
         }
+    }
+
+    public getEquippedRunes(): (Rune | null)[] {
+        return this.equippedRunes;
+    }
+
+    public getInventory(): Rune[] {
+        return this.inventory;
+    }
+
+    public addRuneToInventory(rune: Rune): void {
+        this.inventory.push(rune);
+        this.emit('update');
     }
 
     /**

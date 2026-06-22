@@ -9,6 +9,7 @@ generator client {
 
 model User {
   id             String          @id @default(uuid())
+  wechat_openid  String?         @unique
   level          Int             @default(1)
   exp            Int             @default(0)
   is_vip         Boolean         @default(false)
