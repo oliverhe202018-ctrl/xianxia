@@ -38,6 +38,22 @@ async function main(): Promise<void> {
   // 开启舞台排序，以支持 zIndex 拖拽显示层级
   app.stage.sortableChildren = true;
 
+  // ── 全局点击调试探针 ──────────────────────────────────────────
+  // [DEBUG] 绑定在 stage 上，捕获所有命中测试的最终目标
+  // 输出格式: "Clicked target: <name> <object>"
+  // 通过观察 name 字段，可精确定位是哪个对象吞噬了事件。
+  // 排查完毕后可删除此段，或保留 (生产环境无副作用)
+  app.stage.eventMode = 'static';
+  app.stage.on('pointerdown', (e) => {
+    const t = e.target as any;
+    console.warn(
+      `[DEBUG HitTest] Clicked target name="${t?.name ?? '(no name)'}"`,
+      `| eventMode="${t?.eventMode ?? '?'}"`,
+      `| interactive=${t?.interactive ?? '?'}`,
+      t
+    );
+  });
+
   // ── 资源预加载 ──────────────────────────────────────────────────
   await AssetLoader.loadAssets();
 
@@ -52,13 +68,24 @@ async function main(): Promise<void> {
   const targetingSystem = new TargetingSystem(towerManager, entityManager);
   const combatSystem = new CombatSystem(towerManager, entityManager);
 
-  // ── 层级管理 ──────────────────────────────────────────────────
-  mapManager.view.zIndex = 0; // 最底层地图
-  entityManager.container.zIndex = 10; // 敌人与弹道、特效层
-  towerManager.container.zIndex = 20; // 塔防层 (放置后)
-  towerManager.uiContainer.zIndex = 30; // UI 层
-  gameUI.view.zIndex = 40; // 全局 UI 层 (最上层)
-  InputManager.getInstance().dragLayer.zIndex = 50; // 拖拽层
+  // ── 层级管理 + 明确命名（用于调试探针识别） ──────────────────────
+  mapManager.view.name        = 'MapLayer';         // 地图层
+  mapManager.view.zIndex      = 0;
+
+  entityManager.container.name   = 'EntityLayer';  // 敌人/弹道/特效层
+  entityManager.container.zIndex = 10;
+
+  towerManager.container.name    = 'TowerLayer';   // 已部署塔层
+  towerManager.container.zIndex  = 20;
+
+  towerManager.uiContainer.name    = 'TowerUILayer'; // 塔的备战槽 UI
+  towerManager.uiContainer.zIndex  = 30;
+
+  gameUI.view.name        = 'GameUIRoot';           // 全局 UI 根容器
+  gameUI.view.zIndex      = 40;
+
+  InputManager.getInstance().dragLayer.name   = 'DragLayer'; // 拖拽层
+  InputManager.getInstance().dragLayer.zIndex = 50;
 
   // 修复地图不在中心导致周围黑屏：统一偏移游戏场景容器
   // TILE_SIZE=40，MAP_GRID 大小是 10行15列，即 600x400。通过居中偏移行坐标，让战场位于正中。
