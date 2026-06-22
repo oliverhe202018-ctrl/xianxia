@@ -304,6 +304,7 @@ export class GameUI {
             isModal: true,
             props: { onStart }
         });
+    }
 
     public showGameOver(onRestart: () => void, onBackToLobby: () => void) {
         const gameOverPanel = new GameOverPanel(
