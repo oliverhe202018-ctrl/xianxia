@@ -36,18 +36,40 @@ export class GameUI {
     public bottomNavigationContainer: Container = new Container();
 
     constructor() {
-        // 第一步：彻底将全屏 UI 根容器的 eventMode 设置为 'none'
+        this.view.name = 'GameUIRoot';
+        this.mainUILayer.name = 'MainUILayer';
+        this.statusBarContainer.name = 'StatusBarLayer';
+        this.gatherSpiritButtonContainer.name = 'GatherSpiritButtonLayer';
+        this.shovelToolContainer.name = 'ShovelButtonLayer';
+        this.bottomNavigationContainer.name = 'BottomNavigationLayer';
+
+        // 根容器绝不参与 hit test，避免全屏 UI 容器抢事件
         this.view.eventMode = 'none';
         this.view.interactive = false;
+        (this.view as any).hitArea = null;
 
+        // 纯装饰层绝不参与交互
         this.mainUILayer.eventMode = 'none';
+        this.mainUILayer.interactive = false;
+        (this.mainUILayer as any).hitArea = null;
         this.view.addChild(this.mainUILayer);
 
-        // 挂载各个子组件容器，并授权 eventMode = 'static'
-        this.statusBarContainer.eventMode = 'static';
-        this.gatherSpiritButtonContainer.eventMode = 'static';
-        this.shovelToolContainer.eventMode = 'static';
-        this.bottomNavigationContainer.eventMode = 'static';
+        // 只有实际可点击的按钮容器保留交互能力
+        this.statusBarContainer.eventMode = 'passive';
+        this.statusBarContainer.interactive = false;
+        (this.statusBarContainer as any).hitArea = null;
+
+        this.gatherSpiritButtonContainer.eventMode = 'passive';
+        this.gatherSpiritButtonContainer.interactive = false;
+        (this.gatherSpiritButtonContainer as any).hitArea = null;
+
+        this.shovelToolContainer.eventMode = 'passive';
+        this.shovelToolContainer.interactive = false;
+        (this.shovelToolContainer as any).hitArea = null;
+
+        this.bottomNavigationContainer.eventMode = 'passive';
+        this.bottomNavigationContainer.interactive = false;
+        (this.bottomNavigationContainer as any).hitArea = null;
 
         this.view.addChild(this.statusBarContainer);
         this.view.addChild(this.gatherSpiritButtonContainer);
@@ -63,58 +85,67 @@ export class GameUI {
     // 第二步：完善金色大理石边框表现并清理旧 UI 残影
     private createMainBorder() {
         const border = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
+        border.name = 'GoldenFrame';
         const config = UICoordSystem.getBorderConfig();
         
         border.width = config.width;
         border.height = config.height;
         border.position.set(0, 0);
-        // 调整边框 Sprite 层级，确保其 zIndex 足够高以遮挡旧残影
-        border.zIndex = -1; // 放在 UI 层最底，但遮盖游戏主地图
+        border.zIndex = -1;
 
-        // 执行视觉裁剪：掏空中间的战斗地图显示区域
-        const mask = new Graphics();
-        mask.beginFill(0xFFFFFF);
-        mask.drawRect(0, 0, config.width, config.height);
-        mask.beginHole();
-        // 根据边框厚度掏空，特别需要确保底部实体边框足够高（保留520~600区间不镂空）来遮挡旧按钮
-        mask.drawRect(config.mask.x, config.mask.y, config.mask.width, config.mask.height);
-        mask.endHole();
-        mask.endFill();
-
-        border.mask = mask;
-        
-        // 装饰边框不能拦截事件
+        // 金色边框是纯装饰对象，彻底剥夺交互权
         border.eventMode = 'none';
+        border.interactive = false;
+        (border as any).hitArea = null;
 
-        this.mainUILayer.addChild(mask);
+        // 旧实现使用 hole-mask Graphics 覆盖全屏，这个 Graphics 即使不可见也可能参与命中链。
+        // 改为严格禁用交互并命名，便于用全局探针验证。
+        const frameMask = new Graphics();
+        frameMask.name = 'GoldenFrameMask';
+        frameMask.beginFill(0xFFFFFF);
+        frameMask.drawRect(0, 0, config.width, config.height);
+        frameMask.beginHole();
+        frameMask.drawRect(config.mask.x, config.mask.y, config.mask.width, config.mask.height);
+        frameMask.endHole();
+        frameMask.endFill();
+        frameMask.eventMode = 'none';
+        frameMask.interactive = false;
+        (frameMask as any).hitArea = null;
+
+        border.mask = frameMask;
+
+        this.mainUILayer.addChild(frameMask);
         this.mainUILayer.addChild(border);
     }
 
     // 构建顶部状态栏/底部备战槽
     private createTopBar() {
-        // 为状态栏设计清晰的卷轴背景贴图占位 (复用 uiPanel 模拟大理石/玉石边框)
         const topBar = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
+        topBar.name = 'TopStatusBarBg';
         topBar.width = 300;
         topBar.height = 60;
+        topBar.eventMode = 'none';
+        topBar.interactive = false;
+        (topBar as any).hitArea = null;
         
-        // 使用 UICoordSystem 将其整体移动到屏幕的右侧顶部区域
         const pos = UICoordSystem.getTopRight(310, 10);
         topBar.position.set(pos.x, pos.y);
         this.statusBarContainer.addChild(topBar);
 
-        // 顶部灵石 UI
         const stonesText = new Text('', {
             fontFamily: ['"Microsoft YaHei"', 'sans-serif'],
             fontSize: 20,
-            fill: 0xDAA520, // 金色
+            fill: 0xDAA520,
             fontWeight: 'bold',
             dropShadow: true,
             dropShadowColor: '#000000',
             dropShadowBlur: 2,
             dropShadowDistance: 2
         });
+        stonesText.name = 'TopStatusText';
         stonesText.anchor.set(0.5);
         stonesText.position.set(pos.x + topBar.width / 2, pos.y + topBar.height / 2);
+        stonesText.eventMode = 'none';
         this.statusBarContainer.addChild(stonesText);
 
         GameState.getInstance().onStateChanged((stones, health, maxHealth) => {
@@ -124,27 +155,31 @@ export class GameUI {
 
     // 构建带 Yoyo 缩放缓动反馈的“聚灵”按钮
     private createJuLingButton() {
-        // 这里复用了底图，实际开发时可替换为按钮专属贴图
         const btn = new Sprite(Assets.get('uiPanel'));
+        btn.name = 'GatherSpiritButton';
         btn.width = 120;
         btn.height = 50;
         btn.anchor.set(0.5);
         btn.position.set(400, 500);
-        
-        const label = new Text('聚灵', TextStyles.Title);
-        label.anchor.set(0.5);
-        btn.addChild(label);
 
-        // 交互参数配置
+        // 按钮文案从按钮 Sprite 内剥离，避免文案成为边框/按钮子树中的命中歧义节点
+        const label = new Text('聚灵', TextStyles.Title);
+        label.name = 'GatherSpiritButtonLabel';
+        label.anchor.set(0.5);
+        label.position.set(btn.x, btn.y);
+        label.eventMode = 'none';
+
+        // 仅按钮本体可点击
+        btn.eventMode = 'static';
         btn.interactive = true;
         btn.cursor = 'pointer';
 
-        // 简易 Yoyo 缓动占位：按下即收缩，松开或滑出即回弹
         let isOnCooldown = false;
         
-        // 冷却进度条遮罩
         const cooldownRing = new Graphics();
+        cooldownRing.name = 'GatherSpiritCooldownRing';
         cooldownRing.visible = false;
+        cooldownRing.eventMode = 'none';
         btn.addChild(cooldownRing);
 
         btn.on('pointerdown', (e) => {
@@ -152,15 +187,12 @@ export class GameUI {
             if (isOnCooldown) return;
 
             btn.scale.set(0.9);
-            
-            // 触发抽卡请求
             EventBus.emit('gacha:request', { amount: 1 });
 
-            // 开始 1秒 冷却
             isOnCooldown = true;
             cooldownRing.visible = true;
             
-            let cooldownTime = 1000;
+            const cooldownTime = 1000;
             const startTime = performance.now();
             
             const animateCooldown = () => {
@@ -189,16 +221,19 @@ export class GameUI {
         });
         
         this.gatherSpiritButtonContainer.addChild(btn);
+        this.gatherSpiritButtonContainer.addChild(label);
     }
 
     private createShovelButton() {
         const btn = new Sprite(Assets.get('shovel'));
+        btn.name = 'ShovelButton';
         btn.anchor.set(0.5);
-        btn.position.set(700, 500); // 放在右下角
+        btn.position.set(700, 500);
         btn.width = 64;
         btn.height = 64;
         
         btn.eventMode = 'static';
+        btn.interactive = true;
         btn.cursor = 'pointer';
 
         btn.on('pointerdown', () => {
@@ -222,41 +257,52 @@ export class GameUI {
 
     public showLobby(onStart: () => void) {
         const overlay = new Graphics();
-        // 彻底遮盖全屏，防泄漏，调整层级到最高
+        overlay.name = 'LobbyOverlay';
         overlay.beginFill(0x000000, 0.85);
         overlay.drawRect(-2000, -2000, 5000, 5000);
         overlay.endFill();
         overlay.eventMode = 'static';
         overlay.zIndex = 9999;
 
-        // 新的大理石边框大厅界面
         const marbleBorder = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
+        marbleBorder.name = 'LobbyMarbleFrame';
         marbleBorder.width = 500;
         marbleBorder.height = 400;
         marbleBorder.position.set(150, 100);
+        marbleBorder.eventMode = 'none';
+        marbleBorder.interactive = false;
+        (marbleBorder as any).hitArea = null;
         overlay.addChild(marbleBorder);
 
-        // 裁剪区域 (Clipping Mask)，确保内容不漏出大理石边框下方
         const mask = new Graphics();
+        mask.name = 'LobbyMarbleFrameMask';
         mask.beginFill(0xFFFFFF);
         mask.drawRect(150, 100, 500, 400);
         mask.endFill();
+        mask.eventMode = 'none';
+        mask.interactive = false;
+        (mask as any).hitArea = null;
         marbleBorder.mask = mask;
         overlay.addChild(mask);
 
         const title = new Text('仙侠塔防', TextStyles.Title);
+        title.name = 'LobbyTitle';
         title.anchor.set(0.5);
         title.position.set(400, 180);
+        title.eventMode = 'none';
         overlay.addChild(title);
 
         const btn = new Sprite(Assets.get('uiPanel'));
+        btn.name = 'LobbyStartButton';
         btn.anchor.set(0.5);
         btn.position.set(400, 400);
         btn.eventMode = 'static';
         btn.cursor = 'pointer';
 
         const label = new Text('开始闯关', { fontSize: 22, fill: 0xFFFFFF, fontWeight: 'bold' });
+        label.name = 'LobbyStartButtonLabel';
         label.anchor.set(0.5);
+        label.eventMode = 'none';
         btn.addChild(label);
 
         btn.on('pointerdown', () => {
@@ -266,13 +312,11 @@ export class GameUI {
 
         overlay.addChild(btn);
 
-        // --- 新增：玩法和活动入口 (垂直列表，置于大理石边框右侧区域) ---
         const eventNames = ['每日活动', '限时秘境', '斗法大会', '福利'];
         const startY = 160;
         const btnHeight = 45;
         const spacing = 15;
 
-        // --- 预创建面板 ---
         const mockData = [
             { day: 1, state: SignState.SIGNED, rewardDesc: '灵石x100' },
             { day: 2, state: SignState.AVAILABLE, rewardDesc: '灵石x200' },
@@ -298,11 +342,10 @@ export class GameUI {
         this.view.addChild(puzzlePanel);
 
         eventNames.forEach((name, index) => {
-            // 使用玉石背景样式 (复用 uiPanel)
             const eventBtn = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
+            eventBtn.name = `LobbyEventButton:${name}`;
             eventBtn.width = 140;
             eventBtn.height = btnHeight;
-            // 定位在中心偏右
             eventBtn.position.set(480, startY + index * (btnHeight + spacing));
             eventBtn.eventMode = 'static';
             eventBtn.cursor = 'pointer';
@@ -310,17 +353,18 @@ export class GameUI {
             const eventLabel = new Text(name, { 
                 fontFamily: ['"Microsoft YaHei"', 'sans-serif'], 
                 fontSize: 18, 
-                fill: 0xDAA520, // 金色字体
+                fill: 0xDAA520,
                 fontWeight: 'bold',
                 dropShadow: true,
                 dropShadowColor: '#000000',
                 dropShadowDistance: 1
             });
+            eventLabel.name = `LobbyEventButtonLabel:${name}`;
             eventLabel.anchor.set(0.5);
             eventLabel.position.set(eventBtn.width / 2, eventBtn.height / 2);
+            eventLabel.eventMode = 'none';
             eventBtn.addChild(eventLabel);
 
-            // 绑定交互事件
             eventBtn.on('pointerdown', () => {
                 if (name === '福利') {
                     console.log(`[大厅入口点击]: 弹出${name}面板`);
@@ -336,17 +380,13 @@ export class GameUI {
                 }
             });
 
-            // 添加缩小点击反馈
             eventBtn.on('pointerdown', () => { eventBtn.scale.set(0.95); });
             eventBtn.on('pointerup', () => { eventBtn.scale.set(1); });
             eventBtn.on('pointerupoutside', () => { eventBtn.scale.set(1); });
 
             overlay.addChild(eventBtn);
         });
-        // -------------------------------------------------------------
 
-        
-        // 确保容器开启了排序
         this.view.sortableChildren = true;
         this.view.addChild(overlay);
     }
