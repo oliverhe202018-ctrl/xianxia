@@ -1,4 +1,5 @@
 import { NineSlicePlane, Text, TextStyle, Sprite, Assets, Container, Graphics } from 'pixi.js';
+import { UICoordSystem } from '../utils/UICoordSystem';
 import { InputManager } from '../core/InputManager';
 import { EventBus } from '../core/EventBus';
 import { GameState } from '../core/GameState';
@@ -31,22 +32,29 @@ export class GameUI {
 
     // 构建顶部状态栏/底部备战槽
     private createTopBar() {
-        // 参数为纹理四周不受拉伸影响的区域 (左, 上, 右, 下) 的像素尺寸
+        // 为状态栏设计清晰的卷轴背景贴图占位 (复用 uiPanel 模拟大理石/玉石边框)
         const topBar = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
-        topBar.width = 800;
-        topBar.height = 80;
-        topBar.position.set(0, 0);
+        topBar.width = 300;
+        topBar.height = 60;
+        
+        // 使用 UICoordSystem 将其整体移动到屏幕的右侧顶部区域
+        const pos = UICoordSystem.getTopRight(310, 10);
+        topBar.position.set(pos.x, pos.y);
         this.view.addChild(topBar);
 
         // 顶部灵石 UI
         const stonesText = new Text('', {
-            fontFamily: 'Arial',
+            fontFamily: ['"Microsoft YaHei"', 'sans-serif'],
             fontSize: 20,
-            fill: 0x00FFFF,
-            fontWeight: 'bold'
+            fill: 0xDAA520, // 金色
+            fontWeight: 'bold',
+            dropShadow: true,
+            dropShadowColor: '#000000',
+            dropShadowBlur: 2,
+            dropShadowDistance: 2
         });
-        stonesText.x = 20;
-        stonesText.y = 20;
+        stonesText.anchor.set(0.5);
+        stonesText.position.set(pos.x + topBar.width / 2, pos.y + topBar.height / 2);
         this.view.addChild(stonesText);
 
         GameState.getInstance().onStateChanged((stones, health, maxHealth) => {
@@ -154,14 +162,31 @@ export class GameUI {
 
     public showLobby(onStart: () => void) {
         const overlay = new Graphics();
-        overlay.beginFill(0x000000, 0.8);
-        overlay.drawRect(0, 0, 800, 600);
+        // 彻底遮盖全屏，防泄漏，调整层级到最高
+        overlay.beginFill(0x000000, 0.85);
+        overlay.drawRect(-2000, -2000, 5000, 5000);
         overlay.endFill();
         overlay.eventMode = 'static';
+        overlay.zIndex = 9999;
+
+        // 新的大理石边框大厅界面
+        const marbleBorder = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
+        marbleBorder.width = 500;
+        marbleBorder.height = 400;
+        marbleBorder.position.set(150, 100);
+        overlay.addChild(marbleBorder);
+
+        // 裁剪区域 (Clipping Mask)，确保内容不漏出大理石边框下方
+        const mask = new Graphics();
+        mask.beginFill(0xFFFFFF);
+        mask.drawRect(150, 100, 500, 400);
+        mask.endFill();
+        marbleBorder.mask = mask;
+        overlay.addChild(mask);
 
         const title = new Text('仙侠塔防', TextStyles.Title);
         title.anchor.set(0.5);
-        title.position.set(400, 200);
+        title.position.set(400, 180);
         overlay.addChild(title);
 
         const btn = new Sprite(Assets.get('uiPanel'));
@@ -170,7 +195,7 @@ export class GameUI {
         btn.eventMode = 'static';
         btn.cursor = 'pointer';
 
-        const label = new Text('开始闯关', { fontSize: 20, fill: 0xFFFFFF });
+        const label = new Text('开始闯关', { fontSize: 22, fill: 0xFFFFFF, fontWeight: 'bold' });
         label.anchor.set(0.5);
         btn.addChild(label);
 
@@ -180,6 +205,9 @@ export class GameUI {
         });
 
         overlay.addChild(btn);
+        
+        // 确保容器开启了排序
+        this.view.sortableChildren = true;
         this.view.addChild(overlay);
     }
 
