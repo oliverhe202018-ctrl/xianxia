@@ -31,20 +31,22 @@ export class TargetingSystem {
                 if (!enemy.active) continue;
 
                 const wpIndex = enemy.pathFollower.waypointIndex;
+                const dx = enemy.transform.x - tower.view.x;
+                const dy = enemy.transform.y - tower.view.y;
+                const distSq = dx * dx + dy * dy;
                     
-                    // 优先级 1：寻路点索引最大（最接近终点）
-                    if (wpIndex > highestWaypoint) {
-                        highestWaypoint = wpIndex;
-                        bestTarget = enemy;
-                    } else if (wpIndex === highestWaypoint) {
-                        // 优先级 2：距离防御塔更近的敌人
-                        if (bestTarget) {
-                            const b_dx = bestTarget.transform.x - tower.view.x;
-                            const b_dy = bestTarget.transform.y - tower.view.y;
-                            const b_distSq = b_dx * b_dx + b_dy * b_dy;
-                            if (distSq < b_distSq) {
-                                bestTarget = enemy;
-                            }
+                // 优先级 1：寻路点索引最大（最接近终点）
+                if (wpIndex > highestWaypoint) {
+                    highestWaypoint = wpIndex;
+                    bestTarget = enemy;
+                } else if (wpIndex === highestWaypoint) {
+                    // 优先级 2：距离防御塔更近的敌人
+                    if (bestTarget) {
+                        const b_dx = bestTarget.transform.x - tower.view.x;
+                        const b_dy = bestTarget.transform.y - tower.view.y;
+                        const b_distSq = b_dx * b_dx + b_dy * b_dy;
+                        if (distSq < b_distSq) {
+                            bestTarget = enemy;
                         }
                     }
                 }
