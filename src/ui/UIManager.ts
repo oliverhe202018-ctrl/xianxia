@@ -58,4 +58,8 @@ export class UIManager extends EventEmitter {
     public getTop(): UIConfig | undefined {
         return this.panelStack[this.panelStack.length - 1];
     }
+
+    public getStack(): UIConfig[] {
+        return [...this.panelStack];
+    }
 }

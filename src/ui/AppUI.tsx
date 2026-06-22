@@ -15,7 +15,7 @@ const panelRegistry: Record<string, React.FC<any>> = {
 };
 
 export const AppUI: React.FC = () => {
-    const [panels, setPanels] = useState<UIConfig[]>([]);
+    const [panels, setPanels] = useState<UIConfig[]>(UIManager.getInstance().getStack());
 
     useEffect(() => {
         const uiManager = UIManager.getInstance();
