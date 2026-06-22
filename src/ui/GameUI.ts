@@ -4,6 +4,7 @@ import { InputManager } from '../core/InputManager';
 import { EventBus } from '../core/EventBus';
 import { GameState } from '../core/GameState';
 import { GameOverPanel } from './panels/GameOverPanel';
+import { UIManager } from './UIManager';
 
 // 统一字体样式表 (配置全局渲染参数)
 export const TextStyles = {
@@ -297,11 +298,12 @@ export class GameUI {
     }
 
     public showLobby(onStart: () => void) {
-        // 通知 React 层显示大厅（可选）
-        EventBus.emit('ui:show_lobby', { onStart });
-        // 直接启动游戏（大厅由 React 层处理）
-        onStart();
-    }
+        // 改为通过 UIManager 推入 LobbyPanel，由 React 层渲染大厅并等待玩家点击开始
+        UIManager.getInstance().push({
+            panelId: 'LobbyPanel',
+            isModal: true,
+            props: { onStart }
+        });
 
     public showGameOver(onRestart: () => void, onBackToLobby: () => void) {
         const gameOverPanel = new GameOverPanel(
