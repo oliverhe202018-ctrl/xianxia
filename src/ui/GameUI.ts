@@ -6,6 +6,7 @@ import { GameState } from '../core/GameState';
 import { WelfarePanel, SignState } from './panels/WelfarePanel';
 import { DailyQuestPanel } from './panels/DailyQuestPanel';
 import { SecretRealmPanel } from './panels/SecretRealmPanel';
+import { GameOverPanel } from './panels/GameOverPanel';
 
 // 统一字体样式表 (配置全局渲染参数)
 export const TextStyles = {
@@ -28,6 +29,10 @@ export class GameUI {
     public view: Container = new Container();
 
     constructor() {
+        // 废除根 UI 容器的全屏交互捕获，防止大理石边框等装饰物错误拦截背景点击
+        this.view.eventMode = 'none';
+        this.view.interactive = false;
+        
         this.createTopBar();
         this.createJuLingButton();
         this.createShovelButton();
@@ -294,34 +299,18 @@ export class GameUI {
         this.view.addChild(overlay);
     }
 
-    public showGameOver(onRestart: () => void) {
-        const overlay = new Graphics();
-        overlay.beginFill(0x4a0000, 0.8);
-        overlay.drawRect(0, 0, 800, 600);
-        overlay.endFill();
-        overlay.eventMode = 'static';
-
-        const title = new Text('道死身消', { ...TextStyles.Title, fill: '#FF0000' } as any);
-        title.anchor.set(0.5);
-        title.position.set(400, 200);
-        overlay.addChild(title);
-
-        const btn = new Sprite(Assets.get('uiPanel'));
-        btn.anchor.set(0.5);
-        btn.position.set(400, 400);
-        btn.eventMode = 'static';
-        btn.cursor = 'pointer';
-
-        const label = new Text('重新来过', { fontSize: 20, fill: 0xFFFFFF });
-        label.anchor.set(0.5);
-        btn.addChild(label);
-
-        btn.on('pointerdown', () => {
-            this.view.removeChild(overlay);
-            onRestart();
-        });
-
-        overlay.addChild(btn);
-        this.view.addChild(overlay);
+    public showGameOver(onRestart: () => void, onBackToLobby: () => void) {
+        const gameOverPanel = new GameOverPanel(
+            () => {
+                this.view.removeChild(gameOverPanel);
+                onRestart();
+            },
+            () => {
+                this.view.removeChild(gameOverPanel);
+                onBackToLobby();
+            }
+        );
+        gameOverPanel.zIndex = 10000;
+        this.view.addChild(gameOverPanel);
     }
 }

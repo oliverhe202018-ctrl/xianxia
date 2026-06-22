@@ -196,13 +196,29 @@ export class EntityManager {
     }
 
     public recycleEnemy(enemy: EnemyEntity): void {
-        const index = this.enemies.indexOf(enemy);
-        if (index > -1) {
-            this.enemies.splice(index, 1);
+        enemy.active = false;
+        // 不在这里直接 splice，避免在 CombatSystem 中使用 for...of 迭代时破坏迭代器导致无限循环/卡死
+        if (enemy.view) {
+            enemy.view.visible = false;
         }
-        this.enemyMap.delete(enemy.id);
-        this.spatialHash.remove(enemy as any);
-        this.enemyPool.release(enemy);
+    }
+
+    public cleanup(): void {
+        const remaining = [];
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
+            if (enemy.active) {
+                remaining.push(enemy);
+            } else {
+                this.enemyMap.delete(enemy.id);
+                this.spatialHash.remove(enemy as any);
+                this.enemyPool.release(enemy);
+                if (enemy.view) {
+                    enemy.view.visible = true; // reset for next use
+                }
+            }
+        }
+        this.enemies = remaining;
     }
 
     public spawnProjectile(type: 'sword' | 'fire', x: number, y: number, targetId: number | undefined, targetPos: {x:number,y:number}|undefined, speed: number, damage: number, aoeRadius: number): ProjectileEntity {

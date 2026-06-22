@@ -6,43 +6,52 @@ conn.on('ready', () => {
   console.log('Client :: ready');
   conn.sftp((err, sftp) => {
     if (err) throw err;
-    console.log('SFTP :: ready. Uploading deploy.zip...');
+    console.log('SFTP :: ready. Creating directory...');
     
-    // First ensure the directory exists
-    conn.exec('mkdir -p /root/xianxia', (err, stream) => {
-        stream.on('close', () => {
-            sftp.fastPut('deploy.zip', '/root/xianxia/deploy.zip', (err) => {
-              if (err) throw err;
-              console.log('Upload complete. Extracting and starting server...');
-              
-              const deployScript = `
-              cd /root/xianxia
-              apt-get update && apt-get install -y unzip
-              unzip -o deploy.zip
-              npm install --legacy-peer-deps
-              
-              pm2 describe xianxia-preview > /dev/null
-              if [ $? -eq 0 ]; then
-                  pm2 delete xianxia-preview
-              fi
-              pm2 start npm --name "xianxia-preview" -- run preview -- --host 0.0.0.0 --port 8080
-              pm2 save
-              echo "Deployment successful!"
-              `;
-              
-              conn.exec(deployScript, { pty: true }, (err, stream) => {
-                  if (err) throw err;
-                  stream.on('close', (code, signal) => {
-                      console.log('Stream :: close :: code: ' + code);
-                      conn.end();
-                  }).on('data', (data) => {
-                      process.stdout.write(data.toString());
-                  }).stderr.on('data', (data) => {
-                      process.stderr.write(data.toString());
-                  });
-              });
+    // ignore error if exists
+    sftp.mkdir('/root/xianxia', (err) => {
+      console.log('Directory ensured. Uploading file...');
+      
+      const readStream = fs.createReadStream('deploy.zip');
+      const writeStream = sftp.createWriteStream('/root/xianxia/deploy.zip');
+      
+      writeStream.on('close', () => {
+        console.log('Upload complete. Extracting and starting server...');
+        
+        const deployScript = `
+        cd /root/xianxia
+        apt-get update && apt-get install -y unzip
+        unzip -o deploy.zip
+        npm install --legacy-peer-deps
+        
+        pm2 describe xianxia-preview > /dev/null
+        if [ $? -eq 0 ]; then
+            pm2 delete xianxia-preview
+        fi
+        pm2 start npm --name "xianxia-preview" -- run preview -- --host 0.0.0.0 --port 8080
+        pm2 save
+        echo "Deployment successful!"
+        `;
+        
+        conn.exec(deployScript, { pty: true }, (err, stream) => {
+            if (err) throw err;
+            stream.on('close', (code) => {
+                console.log('Deployment stream closed with code: ' + code);
+                conn.end();
+            }).on('data', (data) => {
+                process.stdout.write(data.toString());
+            }).stderr.on('data', (data) => {
+                process.stderr.write(data.toString());
             });
         });
+      });
+      
+      writeStream.on('error', (err) => {
+         console.error('SFTP Write Error:', err);
+         conn.end();
+      });
+      
+      readStream.pipe(writeStream);
     });
   });
 }).connect({
@@ -53,5 +62,5 @@ conn.on('ready', () => {
 });
 
 conn.on('error', (err) => {
-    console.error('Connection error with port 2222:', err.message);
+    console.error('Connection error:', err.message);
 });

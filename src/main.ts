@@ -98,9 +98,17 @@ async function main(): Promise<void> {
   });
 
   EventBus.on('game:over', () => {
-      gameUI.showGameOver(() => {
-          startGame();
-      });
+      gameUI.showGameOver(
+          () => {
+              startGame();
+          },
+          () => {
+              GameState.getInstance().setPhase(GamePhase.LOBBY);
+              gameUI.showLobby(() => {
+                  startGame();
+              });
+          }
+      );
   });
 
   gameUI.showLobby(() => {
@@ -127,6 +135,9 @@ async function main(): Promise<void> {
     // 索敌与战斗逻辑
     targetingSystem.update();
     combatSystem.update(deltaMS, delta);
+
+    // 每帧末尾清理需要销毁的实体，避免迭代器失效卡死 CPU
+    entityManager.cleanup();
   });
 
   console.log('[xianxia-td] Pixi.js application initialized.');

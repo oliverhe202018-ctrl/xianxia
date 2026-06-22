@@ -1,3 +1,5 @@
+import { EventBus } from './EventBus';
+
 export type GameStateListener = (stones: number, health: number, maxHealth: number) => void;
 
 export enum GamePhase {
@@ -43,6 +45,7 @@ export class GameState {
         if (this._health <= 0) {
             this._health = 0;
             this.setPhase(GamePhase.GAME_OVER);
+            EventBus.emit('game:over', undefined);
         }
         this.notify();
     }
