@@ -62,6 +62,7 @@ export class UserStore extends EventEmitter {
     public getExp(): number { return this.exp; }
     public getRealmName(): string { return this.realmName; }
     public getHeavenlyScrolls(): number { return this.heavenly_scrolls; }
+    public getIsVip(): boolean { return this.isVip; }
     public getPityCounter(): number { return this.pityCounter; }
 
     public addHeavenlyScrolls(amount: number): void {

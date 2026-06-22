@@ -23,15 +23,13 @@ async function main(): Promise<void> {
   GameState.getInstance().setStones(userStore.getStartingEnergy());
 
   // ── Pixi.js 应用初始化 ────────────────────────────────────────
-  const app = new Application();
-
-  await app.init({
+  const app = new Application({
     ...GAME.APP_OPTIONS,
     width: GAME.WIDTH,
     height: GAME.HEIGHT,
   });
 
-  document.body.appendChild(app.canvas);
+  document.body.appendChild(app.view as HTMLCanvasElement);
 
   // 开启舞台排序，以支持 zIndex 拖拽显示层级
   app.stage.sortableChildren = true;
@@ -58,9 +56,8 @@ async function main(): Promise<void> {
   app.stage.addChild(towerManager.uiContainer);
 
   // ── 游戏主循环 ────────────────────────────────────────────────
-  app.ticker.add((ticker) => {
-    const delta = ticker.deltaTime; // 帧率系数，通常为 1
-    const deltaMS = ticker.deltaMS; // 距上一帧的真实时间间隔（毫秒）
+  app.ticker.add((delta: number) => {
+    const deltaMS = app.ticker.deltaMS; // 距上一帧的真实时间间隔（毫秒）
 
     waveManager.update(deltaMS);
     movementSystem.update(delta);

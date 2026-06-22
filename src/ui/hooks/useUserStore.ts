@@ -24,6 +24,7 @@ export function useUserStore() {
         exp: store.getExp(),
         level: store.getLevel(),
         isVip: store.getIsVip(),
-        realmName: store.getRealmName() 
+        realmName: store.getRealmName(),
+        heavenlyScrolls: store.getHeavenlyScrolls()
     };
 }
