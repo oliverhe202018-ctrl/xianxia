@@ -28,14 +28,66 @@ export const TextStyles = {
 export class GameUI {
     public view: Container = new Container();
 
+    // 逻辑子容器划分，便于独立控制交互
+    public mainUILayer: Container = new Container();
+    public statusBarContainer: Container = new Container();
+    public gatherSpiritButtonContainer: Container = new Container();
+    public shovelToolContainer: Container = new Container();
+    public bottomNavigationContainer: Container = new Container();
+
     constructor() {
-        // 废除根 UI 容器的全屏交互捕获，防止大理石边框等装饰物错误拦截背景点击
+        // 第一步：彻底将全屏 UI 根容器的 eventMode 设置为 'none'
         this.view.eventMode = 'none';
         this.view.interactive = false;
+
+        this.mainUILayer.eventMode = 'none';
+        this.view.addChild(this.mainUILayer);
+
+        // 挂载各个子组件容器，并授权 eventMode = 'static'
+        this.statusBarContainer.eventMode = 'static';
+        this.gatherSpiritButtonContainer.eventMode = 'static';
+        this.shovelToolContainer.eventMode = 'static';
+        this.bottomNavigationContainer.eventMode = 'static';
+
+        this.view.addChild(this.statusBarContainer);
+        this.view.addChild(this.gatherSpiritButtonContainer);
+        this.view.addChild(this.shovelToolContainer);
+        this.view.addChild(this.bottomNavigationContainer);
         
+        this.createMainBorder();
         this.createTopBar();
         this.createJuLingButton();
         this.createShovelButton();
+    }
+
+    // 第二步：完善金色大理石边框表现并清理旧 UI 残影
+    private createMainBorder() {
+        const border = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
+        const config = UICoordSystem.getBorderConfig();
+        
+        border.width = config.width;
+        border.height = config.height;
+        border.position.set(0, 0);
+        // 调整边框 Sprite 层级，确保其 zIndex 足够高以遮挡旧残影
+        border.zIndex = -1; // 放在 UI 层最底，但遮盖游戏主地图
+
+        // 执行视觉裁剪：掏空中间的战斗地图显示区域
+        const mask = new Graphics();
+        mask.beginFill(0xFFFFFF);
+        mask.drawRect(0, 0, config.width, config.height);
+        mask.beginHole();
+        // 根据边框厚度掏空，特别需要确保底部实体边框足够高（保留520~600区间不镂空）来遮挡旧按钮
+        mask.drawRect(config.mask.x, config.mask.y, config.mask.width, config.mask.height);
+        mask.endHole();
+        mask.endFill();
+
+        border.mask = mask;
+        
+        // 装饰边框不能拦截事件
+        border.eventMode = 'none';
+
+        this.mainUILayer.addChild(mask);
+        this.mainUILayer.addChild(border);
     }
 
     // 构建顶部状态栏/底部备战槽
@@ -48,7 +100,7 @@ export class GameUI {
         // 使用 UICoordSystem 将其整体移动到屏幕的右侧顶部区域
         const pos = UICoordSystem.getTopRight(310, 10);
         topBar.position.set(pos.x, pos.y);
-        this.view.addChild(topBar);
+        this.statusBarContainer.addChild(topBar);
 
         // 顶部灵石 UI
         const stonesText = new Text('', {
@@ -63,7 +115,7 @@ export class GameUI {
         });
         stonesText.anchor.set(0.5);
         stonesText.position.set(pos.x + topBar.width / 2, pos.y + topBar.height / 2);
-        this.view.addChild(stonesText);
+        this.statusBarContainer.addChild(stonesText);
 
         GameState.getInstance().onStateChanged((stones, health, maxHealth) => {
             stonesText.text = `灵石: ${stones} | 生命: ${health}/${maxHealth}`;
@@ -136,7 +188,7 @@ export class GameUI {
             if (!isOnCooldown) btn.scale.set(1.0);
         });
         
-        this.view.addChild(btn);
+        this.gatherSpiritButtonContainer.addChild(btn);
     }
 
     private createShovelButton() {
@@ -165,7 +217,7 @@ export class GameUI {
 
         InputManager.getInstance().bindShovelButton(btn);
 
-        this.view.addChild(btn);
+        this.shovelToolContainer.addChild(btn);
     }
 
     public showLobby(onStart: () => void) {
