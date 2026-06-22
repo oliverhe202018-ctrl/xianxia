@@ -13,6 +13,7 @@ export interface GameEventMap {
     'task:updated': { taskId: string };
     'welfare:claim': number;
     'shovel:used': void;
+    'ui:show_lobby': { onStart: () => void };
 }
 
 type EventCallback<T> = (data: T) => void;

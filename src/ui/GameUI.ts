@@ -3,9 +3,6 @@ import { UICoordSystem } from '../utils/UICoordSystem';
 import { InputManager } from '../core/InputManager';
 import { EventBus } from '../core/EventBus';
 import { GameState } from '../core/GameState';
-import { WelfarePanel, SignState } from './panels/WelfarePanel';
-import { DailyQuestPanel } from './panels/DailyQuestPanel';
-import { SecretRealmPanel } from './panels/SecretRealmPanel';
 import { GameOverPanel } from './panels/GameOverPanel';
 
 // 统一字体样式表 (配置全局渲染参数)
@@ -300,151 +297,10 @@ export class GameUI {
     }
 
     public showLobby(onStart: () => void) {
-        const existing = this.overlayLayer.getChildByName('LobbyOverlay');
-        if (existing) {
-            this.overlayLayer.removeChild(existing);
-            existing.destroy({ children: true });
-        }
-
-        this.overlayLayer.eventMode = 'none';
-
-        const overlay = new Graphics();
-        overlay.name = 'LobbyOverlay';
-        overlay.beginFill(0x000000, 0.85);
-        overlay.drawRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
-        overlay.endFill();
-        overlay.eventMode = 'static';
-        overlay.zIndex = 9999;
-        overlay.sortableChildren = true;
-
-        const marbleBorder = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
-        marbleBorder.name = 'LobbyMarbleFrame';
-        marbleBorder.width = 500;
-        marbleBorder.height = 400;
-        marbleBorder.position.set(150, 100);
-        marbleBorder.eventMode = 'none';
-        marbleBorder.interactive = false;
-        (marbleBorder as any).hitArea = null;
-        overlay.addChild(marbleBorder);
-
-        const mask = new Graphics();
-        mask.name = 'LobbyMarbleFrameMask';
-        mask.beginFill(0xFFFFFF);
-        mask.drawRect(150, 100, 500, 400);
-        mask.endFill();
-        mask.eventMode = 'none';
-        mask.interactive = false;
-        (mask as any).hitArea = null;
-        marbleBorder.mask = mask;
-        overlay.addChild(mask);
-
-        const title = new Text('仙侠塔防', TextStyles.Title);
-        title.name = 'LobbyTitle';
-        title.anchor.set(0.5);
-        title.position.set(400, 180);
-        title.eventMode = 'none';
-        overlay.addChild(title);
-
-        const btn = new Sprite(Assets.get('uiPanel'));
-        btn.name = 'LobbyStartButton';
-        btn.anchor.set(0.5);
-        btn.position.set(400, 400);
-        btn.eventMode = 'static';
-        btn.cursor = 'pointer';
-
-        const label = new Text('开始闯关', { fontSize: 22, fill: 0xFFFFFF, fontWeight: 'bold' });
-        label.name = 'LobbyStartButtonLabel';
-        label.anchor.set(0.5);
-        label.eventMode = 'none';
-        btn.addChild(label);
-
-        btn.on('pointerdown', () => {
-            this.overlayLayer.removeChild(overlay);
-            overlay.destroy({ children: true });
-            this.overlayLayer.eventMode = 'none';
-            onStart();
-        });
-
-        overlay.addChild(btn);
-
-        const eventNames = ['每日活动', '限时秘境', '斗法大会', '福利'];
-        const startY = 160;
-        const btnHeight = 45;
-        const spacing = 15;
-
-        const mockData = [
-            { day: 1, state: SignState.SIGNED, rewardDesc: '灵石x100' },
-            { day: 2, state: SignState.AVAILABLE, rewardDesc: '灵石x200' },
-            { day: 3, state: SignState.LOCKED, rewardDesc: '灵石x300' },
-            { day: 4, state: SignState.LOCKED, rewardDesc: '无字天书x1' },
-            { day: 5, state: SignState.LOCKED, rewardDesc: '灵石x500' },
-            { day: 6, state: SignState.LOCKED, rewardDesc: '灵石x600' },
-            { day: 7, state: SignState.LOCKED, rewardDesc: '无字天书x3' }
-        ];
-        const welfarePanel = new WelfarePanel(mockData);
-        welfarePanel.zIndex = 10000;
-        welfarePanel.visible = false;
-        overlay.addChild(welfarePanel);
-
-        const dailyPanel = new DailyQuestPanel();
-        dailyPanel.zIndex = 10000;
-        dailyPanel.visible = false;
-        overlay.addChild(dailyPanel);
-
-        const puzzlePanel = new SecretRealmPanel();
-        puzzlePanel.zIndex = 10000;
-        puzzlePanel.visible = false;
-        overlay.addChild(puzzlePanel);
-
-        eventNames.forEach((name, index) => {
-            const eventBtn = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
-            eventBtn.name = `LobbyEventButton:${name}`;
-            eventBtn.width = 140;
-            eventBtn.height = btnHeight;
-            eventBtn.position.set(480, startY + index * (btnHeight + spacing));
-            eventBtn.eventMode = 'static';
-            eventBtn.cursor = 'pointer';
-
-            const eventLabel = new Text(name, { 
-                fontFamily: ['"Microsoft YaHei"', 'sans-serif'], 
-                fontSize: 18, 
-                fill: 0xDAA520,
-                fontWeight: 'bold',
-                dropShadow: true,
-                dropShadowColor: '#000000',
-                dropShadowDistance: 1
-            });
-            eventLabel.name = `LobbyEventButtonLabel:${name}`;
-            eventLabel.anchor.set(0.5);
-            eventLabel.position.set(eventBtn.width / 2, eventBtn.height / 2);
-            eventLabel.eventMode = 'none';
-            eventBtn.addChild(eventLabel);
-
-            eventBtn.on('pointerdown', () => {
-                if (name === '福利') {
-                    console.log(`[大厅入口点击]: 弹出${name}面板`);
-                    welfarePanel.visible = true;
-                } else if (name === '每日活动') {
-                    console.log(`[大厅入口点击]: 弹出${name}面板`);
-                    dailyPanel.visible = true;
-                } else if (name === '限时秘境') {
-                    console.log(`[大厅入口点击]: 弹出${name}面板`);
-                    puzzlePanel.visible = true;
-                } else {
-                    console.log(`[大厅入口点击]: ${name}`);
-                }
-            });
-
-            eventBtn.on('pointerdown', () => { eventBtn.scale.set(0.95); });
-            eventBtn.on('pointerup', () => { eventBtn.scale.set(1); });
-            eventBtn.on('pointerupoutside', () => { eventBtn.scale.set(1); });
-
-            overlay.addChild(eventBtn);
-        });
-
-        this.view.sortableChildren = true;
-        this.overlayLayer.addChild(overlay);
-        this.overlayLayer.eventMode = 'static';
+        // 通知 React 层显示大厅（可选）
+        EventBus.emit('ui:show_lobby', { onStart });
+        // 直接启动游戏（大厅由 React 层处理）
+        onStart();
     }
 
     public showGameOver(onRestart: () => void, onBackToLobby: () => void) {
