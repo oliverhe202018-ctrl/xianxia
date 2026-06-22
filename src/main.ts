@@ -60,6 +60,16 @@ async function main(): Promise<void> {
   gameUI.view.zIndex = 40; // 全局 UI 层 (最上层)
   InputManager.getInstance().dragLayer.zIndex = 50; // 拖拽层
 
+  // 修复地图不在中心导致周围黑屏：统一偏移游戏场景容器
+  // TILE_SIZE=40，MAP_GRID 大小是 10行15列，即 600x400。通过居中偏移行坐标，让战场位于正中。
+  const mapOffsetX = (GAME.WIDTH - 15 * 40) / 2;
+  const mapOffsetY = (GAME.HEIGHT - 10 * 40) / 2 + 40; // Y轴微调避开顶部面板
+
+  mapManager.view.position.set(mapOffsetX, mapOffsetY);
+  entityManager.container.position.set(mapOffsetX, mapOffsetY);
+  towerManager.container.position.set(mapOffsetX, mapOffsetY);
+  towerManager.uiContainer.position.set(mapOffsetX, mapOffsetY);
+
   app.stage.addChild(mapManager.view);
   app.stage.addChild(entityManager.container);
   app.stage.addChild(towerManager.container);

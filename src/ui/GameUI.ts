@@ -58,6 +58,8 @@ export class GameUI {
     private createJuLingButton() {
         // 这里复用了底图，实际开发时可替换为按钮专属贴图
         const btn = new Sprite(Assets.get('uiPanel'));
+        btn.width = 120;
+        btn.height = 50;
         btn.anchor.set(0.5);
         btn.position.set(400, 500);
         
@@ -73,12 +75,9 @@ export class GameUI {
         let isOnCooldown = false;
         
         // 冷却进度条遮罩
-        const cooldownOverlay = new Graphics();
-        cooldownOverlay.beginFill(0x000000, 0.5);
-        cooldownOverlay.drawRect(-btn.width/2, -btn.height/2, btn.width, btn.height);
-        cooldownOverlay.endFill();
-        cooldownOverlay.visible = false;
-        btn.addChild(cooldownOverlay);
+        const cooldownRing = new Graphics();
+        cooldownRing.visible = false;
+        btn.addChild(cooldownRing);
 
         btn.on('pointerdown', (e) => {
             e.stopPropagation();
@@ -91,7 +90,7 @@ export class GameUI {
 
             // 开始 1秒 冷却
             isOnCooldown = true;
-            cooldownOverlay.visible = true;
+            cooldownRing.visible = true;
             
             let cooldownTime = 1000;
             const startTime = performance.now();
@@ -100,13 +99,14 @@ export class GameUI {
                 const elapsed = performance.now() - startTime;
                 if (elapsed >= cooldownTime) {
                     isOnCooldown = false;
-                    cooldownOverlay.visible = false;
+                    cooldownRing.visible = false;
+                    cooldownRing.clear();
+                    btn.scale.set(1.0);
                 } else {
-                    const ratio = 1 - (elapsed / cooldownTime);
-                    cooldownOverlay.clear();
-                    cooldownOverlay.beginFill(0x000000, 0.5);
-                    cooldownOverlay.drawRect(-btn.width/2, -btn.height/2, btn.width * ratio, btn.height);
-                    cooldownOverlay.endFill();
+                    const ratio = elapsed / cooldownTime;
+                    cooldownRing.clear();
+                    cooldownRing.lineStyle(4, 0x00FFFF, 0.8);
+                    cooldownRing.arc(0, 0, btn.width / 2 + 5, -Math.PI / 2, -Math.PI / 2 + (1 - ratio) * Math.PI * 2, false);
                     requestAnimationFrame(animateCooldown);
                 }
             };
@@ -119,7 +119,7 @@ export class GameUI {
         btn.on('pointerupoutside', () => {
             if (!isOnCooldown) btn.scale.set(1.0);
         });
-
+        
         this.view.addChild(btn);
     }
 

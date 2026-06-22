@@ -48,6 +48,8 @@ export class MapManager {
         const bgTexture = Assets.get('bg') as Texture;
         if (bgTexture) {
             this.bgSprite = new TilingSprite(bgTexture, GAME.WIDTH, GAME.HEIGHT);
+            this.bgSprite.x = -this.view.x;
+            this.bgSprite.y = -this.view.y;
             this.view.addChild(this.bgSprite);
         }
 
