@@ -215,6 +215,31 @@ export class GameUI {
         const btnHeight = 45;
         const spacing = 15;
 
+        // --- 预创建面板 ---
+        const mockData = [
+            { day: 1, state: SignState.SIGNED, rewardDesc: '灵石x100' },
+            { day: 2, state: SignState.AVAILABLE, rewardDesc: '灵石x200' },
+            { day: 3, state: SignState.LOCKED, rewardDesc: '灵石x300' },
+            { day: 4, state: SignState.LOCKED, rewardDesc: '无字天书x1' },
+            { day: 5, state: SignState.LOCKED, rewardDesc: '灵石x500' },
+            { day: 6, state: SignState.LOCKED, rewardDesc: '灵石x600' },
+            { day: 7, state: SignState.LOCKED, rewardDesc: '无字天书x3' }
+        ];
+        const welfarePanel = new WelfarePanel(mockData);
+        welfarePanel.zIndex = 10000;
+        welfarePanel.visible = false;
+        this.view.addChild(welfarePanel);
+
+        const dailyPanel = new DailyQuestPanel();
+        dailyPanel.zIndex = 10000;
+        dailyPanel.visible = false;
+        this.view.addChild(dailyPanel);
+
+        const puzzlePanel = new SecretRealmPanel();
+        puzzlePanel.zIndex = 10000;
+        puzzlePanel.visible = false;
+        this.view.addChild(puzzlePanel);
+
         eventNames.forEach((name, index) => {
             // 使用玉石背景样式 (复用 uiPanel)
             const eventBtn = new NineSlicePlane(Assets.get('uiPanel'), 20, 20, 20, 20);
@@ -242,36 +267,13 @@ export class GameUI {
             eventBtn.on('pointerdown', () => {
                 if (name === '福利') {
                     console.log(`[大厅入口点击]: 弹出${name}面板`);
-                    
-                    // 模拟玩家的7日签到数据
-                    const mockData = [
-                        { day: 1, state: SignState.SIGNED, rewardDesc: '灵石x100' },
-                        { day: 2, state: SignState.AVAILABLE, rewardDesc: '灵石x200' },
-                        { day: 3, state: SignState.LOCKED, rewardDesc: '灵石x300' },
-                        { day: 4, state: SignState.LOCKED, rewardDesc: '无字天书x1' },
-                        { day: 5, state: SignState.LOCKED, rewardDesc: '灵石x500' },
-                        { day: 6, state: SignState.LOCKED, rewardDesc: '灵石x600' },
-                        { day: 7, state: SignState.LOCKED, rewardDesc: '无字天书x3' }
-                    ];
-
-                    const welfarePanel = new WelfarePanel(mockData, () => {
-                        console.log('福利面板已关闭');
-                    });
-                    
-                    welfarePanel.zIndex = 10000; // 确保在 lobby overlay (9999) 之上
-                    
-                    welfarePanel.zIndex = 10000;
-                    this.view.addChild(welfarePanel);
+                    welfarePanel.visible = true;
                 } else if (name === '每日活动') {
                     console.log(`[大厅入口点击]: 弹出${name}面板`);
-                    const dailyPanel = new DailyQuestPanel(() => console.log('每日活动面板已关闭'));
-                    dailyPanel.zIndex = 10000;
-                    this.view.addChild(dailyPanel);
+                    dailyPanel.visible = true;
                 } else if (name === '限时秘境') {
                     console.log(`[大厅入口点击]: 弹出${name}面板`);
-                    const puzzlePanel = new SecretRealmPanel(() => console.log('限时秘境面板已关闭'));
-                    puzzlePanel.zIndex = 10000;
-                    this.view.addChild(puzzlePanel);
+                    puzzlePanel.visible = true;
                 } else {
                     console.log(`[大厅入口点击]: ${name}`);
                 }

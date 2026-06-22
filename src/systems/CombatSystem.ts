@@ -1,6 +1,6 @@
-import { TowerManager } from '../core/TowerManager';
 import { EntityManager } from '../core/EntityManager';
 import { GameState } from '../core/GameState';
+import { GameConfig } from '../config/GameConfig';
 import { UserStore } from '../store/UserStore';
 import { EventBus } from '../core/EventBus'; // 引入用户仓库
 import { EquipmentStore } from '../store/EquipmentStore'; // 引入装备库
@@ -25,23 +25,18 @@ export class CombatSystem {
         // 1. 防御塔开火逻辑
         for (const tower of towers) {
             if (tower.targetId !== undefined) {
-                const target = enemies.find(e => e.id === tower.targetId);
+                const target = this.entityManager.enemyMap.get(tower.targetId);
                 if (target) {
-                    let attackInterval = 1000;
-                    let speed = 5;
-                    let baseDamage = 10;
+                    const baseStats = GameConfig.Towers.baseStats[tower.charName as keyof typeof GameConfig.Towers.baseStats];
+                    let baseDamage = baseStats ? baseStats.attack * Math.pow(GameConfig.Towers.growthMultipliers.attack, tower.rank - 1) : 10;
+                    let attackSpeed = baseStats ? baseStats.attackSpeed * Math.pow(GameConfig.Towers.growthMultipliers.attackSpeed, tower.rank - 1) : 1;
+                    let attackInterval = 1000 / attackSpeed;
+                    
+                    let speed = 5 + tower.rank;
                     let aoeRadius = 0;
                     let type: 'sword' | 'fire' = 'sword';
 
-                    if (tower.charName === '剑') {
-                        attackInterval = Math.max(100, 500 - tower.rank * 50); 
-                        speed = 8 + tower.rank;
-                        baseDamage = 20 + tower.rank * 10;
-                        type = 'sword';
-                    } else if (tower.charName === '火') {
-                        attackInterval = Math.max(500, 1500 - tower.rank * 100); 
-                        speed = 4 + tower.rank;
-                        baseDamage = 30 + tower.rank * 15;
+                    if (tower.charName === '火') {
                         aoeRadius = 40 + tower.rank * 10;
                         type = 'fire';
                     }
@@ -127,7 +122,7 @@ export class CombatSystem {
             let targetX = p.transform.x;
             let targetY = p.transform.y;
             let hit = false;
-            let targetEnemy = enemies.find(e => e.id === p.targetId);
+            let targetEnemy = p.targetId !== undefined ? this.entityManager.enemyMap.get(p.targetId) : undefined;
 
             if (p.type === 'sword') {
                 if (!targetEnemy && !p.targetPos) { 
@@ -220,8 +215,7 @@ export class CombatSystem {
             const te = this.entityManager.textEffects[i];
             te.age += deltaMS;
             if (te.age >= te.lifeTime) {
-                if (te.view.parent) te.view.parent.removeChild(te.view);
-                this.entityManager.textEffects.splice(i, 1);
+                this.entityManager.recycleTextEffect(te);
             } else {
                 const ratio = te.age / te.lifeTime;
                 te.view.alpha = 1 - ratio;
@@ -232,8 +226,19 @@ export class CombatSystem {
 
     private damageEnemy(enemy: any, amount: number) {
         if (!enemy.active) return; 
+
+        const previousHealth = enemy.health.current;
         enemy.health.current -= amount;
         
+        // FSM 状态流转检测 (Boss 跨越血量阈值触发转阶段)
+        if (enemy.fsm) {
+            const healthRatio = enemy.health.current / enemy.health.max;
+            if (previousHealth / enemy.health.max > 0.5 && healthRatio <= 0.5) {
+                enemy.fsm.transitionTo('phase2');
+                EventBus.emit('boss:phase_change', { enemyId: enemy.id, phase: 'phase2' });
+            }
+        }
+
         if (enemy.health.current <= 0) {
             enemy.active = false;
             EventBus.emit('combat:kill', { enemyId: enemy.id });

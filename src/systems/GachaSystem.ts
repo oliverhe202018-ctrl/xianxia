@@ -33,9 +33,17 @@ export class GachaSystem {
     private engine: GachaEngine;
     private readonly PITY_THRESHOLD = 100; // 100抽硬保底
 
+    private unsubscribe: () => void;
+
     private constructor() {
         this.engine = new GachaEngine(DEFAULT_POOL);
-        EventBus.on('gacha:request', this.handleGachaRequest);
+        this.unsubscribe = EventBus.on('gacha:request', this.handleGachaRequest);
+    }
+
+    public destroy() {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+        }
     }
 
     private handleGachaRequest = (data: { amount: number }) => {

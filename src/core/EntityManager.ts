@@ -5,15 +5,15 @@ import { SpatialHash } from '../utils/SpatialHash';
 
 export class EntityManager {
     public enemies: EnemyEntity[] = [];
+    public enemyMap: Map<number, EnemyEntity> = new Map();
     public projectiles: ProjectileEntity[] = [];
     public effects: EffectEntity[] = [];
 
     private enemyPool: ObjectPool<EnemyEntity>;
     private projectilePool: ObjectPool<ProjectileEntity>;
     private effectPool: ObjectPool<EffectEntity>;
-    
-    // 我们用另一个数组保存文字特效，因为它们不能复用 graphics
-    public textEffects: { view: Text, age: number, lifeTime: number }[] = [];
+    public textEffects: { view: Text, age: number, lifeTime: number, active: boolean }[] = [];
+    private textEffectPool: ObjectPool<{ view: Text, age: number, lifeTime: number, active: boolean }>;
     
     private nextId: number = 1;
     public container: Container;
@@ -48,6 +48,17 @@ export class EntityManager {
         this.effectPool = new ObjectPool<EffectEntity>(
             () => this.createEffectObj(),
             { initialSize: 20, resetFn: (e) => this.resetEntity(e) }
+        );
+
+        this.textEffectPool = new ObjectPool<{ view: Text, age: number, lifeTime: number, active: boolean }>(
+            () => this.createTextEffectObj(),
+            { initialSize: 20, resetFn: (te) => {
+                te.active = false;
+                te.view.text = '';
+                if (te.view.parent) {
+                    te.view.parent.removeChild(te.view);
+                }
+            }}
         );
     }
 
@@ -115,6 +126,24 @@ export class EntityManager {
         };
     }
 
+    private createTextEffectObj(): { view: Text, age: number, lifeTime: number, active: boolean } {
+        const text = new Text('', {
+            fontFamily: 'Arial',
+            fontSize: 16,
+            fill: 0x00FFFF,
+            fontWeight: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3
+        });
+        text.anchor.set(0.5);
+        return {
+            view: text,
+            age: 0,
+            lifeTime: 800,
+            active: false
+        };
+    }
+
     private resetEntity(entity: any): void {
         entity.active = false;
         
@@ -161,13 +190,17 @@ export class EntityManager {
         }
 
         this.enemies.push(enemy);
+        this.enemyMap.set(enemy.id, enemy);
         this.spatialHash.insert(enemy as any);
         return enemy;
     }
 
     public recycleEnemy(enemy: EnemyEntity): void {
         const index = this.enemies.indexOf(enemy);
-        if (index !== -1) this.enemies.splice(index, 1);
+        if (index > -1) {
+            this.enemies.splice(index, 1);
+        }
+        this.enemyMap.delete(enemy.id);
         this.spatialHash.remove(enemy as any);
         this.enemyPool.release(enemy);
     }
@@ -253,23 +286,23 @@ export class EntityManager {
     }
 
     public spawnTextEffect(x: number, y: number, textStr: string): void {
-        const text = new Text(textStr, {
-            fontFamily: 'Arial',
-            fontSize: 16,
-            fill: 0x00FFFF,
-            fontWeight: 'bold',
-            stroke: '#000000',
-            strokeThickness: 3
-        });
-        text.anchor.set(0.5);
-        text.x = x;
-        text.y = y;
-        this.container.addChild(text);
+        const te = this.textEffectPool.get();
+        te.active = true;
+        te.age = 0;
+        te.lifeTime = 800;
+        te.view.text = textStr;
+        te.view.x = x;
+        te.view.y = y;
+        this.container.addChild(te.view);
         
-        this.textEffects.push({
-            view: text,
-            age: 0,
-            lifeTime: 800 // 800ms fade out
-        });
+        this.textEffects.push(te);
+    }
+
+    public recycleTextEffect(te: { view: Text, age: number, lifeTime: number, active: boolean }): void {
+        const index = this.textEffects.indexOf(te);
+        if (index !== -1) {
+            this.textEffects.splice(index, 1);
+        }
+        this.textEffectPool.release(te);
     }
 }

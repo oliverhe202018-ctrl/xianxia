@@ -56,13 +56,18 @@ export class ModalWindow extends Container {
         this.closeBtn.addChild(closeIcon);
 
         this.closeBtn.on('pointerdown', () => {
-            this.destroy({ children: true });
+            this.closeBtn.scale.set(0.9);
+        });
+        
+        this.closeBtn.on('pointerup', () => { 
+            this.closeBtn.scale.set(1); 
+            this.visible = false;
             if (onClose) onClose();
         });
         
-        this.closeBtn.on('pointerdown', () => { this.closeBtn.scale.set(0.9); });
-        this.closeBtn.on('pointerup', () => { this.closeBtn.scale.set(1); });
-        this.closeBtn.on('pointerupoutside', () => { this.closeBtn.scale.set(1); });
+        this.closeBtn.on('pointerupoutside', () => { 
+            this.closeBtn.scale.set(1); 
+        });
 
         this.panel.addChild(this.closeBtn);
     }

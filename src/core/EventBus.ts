@@ -6,6 +6,7 @@ export interface GameEventMap {
     'tower:merged': { entityId: number, charName: TowerCharName, newRank: number };
     'level:start': { level: number };
     'game:over': void;
+    'boss:phase_change': { enemyId: number, phase: string };
 }
 
 type EventCallback<T> = (data: T) => void;
@@ -13,11 +14,15 @@ type EventCallback<T> = (data: T) => void;
 class EventBusImpl {
     private handlers: { [K in keyof GameEventMap]?: EventCallback<GameEventMap[K]>[] } = {};
 
-    on<K extends keyof GameEventMap>(event: K, handler: EventCallback<GameEventMap[K]>): void {
+    on<K extends keyof GameEventMap>(event: K, handler: EventCallback<GameEventMap[K]>): () => void {
         if (!this.handlers[event]) {
             this.handlers[event] = [];
         }
         this.handlers[event]!.push(handler);
+        
+        return () => {
+            this.off(event, handler);
+        };
     }
 
     off<K extends keyof GameEventMap>(event: K, handler: EventCallback<GameEventMap[K]>): void {

@@ -64,8 +64,14 @@ export class MovementSystem {
                 enemy.view.y = enemy.transform.y;
             }
 
-            // 同步空间哈希网格状态
-            this.entityManager.spatialHash.update(enemy as any);
+        }
+
+        // --- 修复点: 每帧末尾全量重构 SpatialHash 确保绝对同步 ---
+        this.entityManager.spatialHash.clear();
+        for (const enemy of enemies) {
+            if (enemy.active) {
+                this.entityManager.spatialHash.insert(enemy as any);
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ export interface Transform {
     x: number;
     y: number;
 }
+import { BossStateMachine } from './BossStateMachine';
 
 export interface Velocity {
     speed: number;
@@ -24,6 +25,7 @@ export interface EnemyEntity {
     health: Health;
     pathFollower: PathFollower;
     view?: any;
+    fsm?: BossStateMachine;
 }
 
 export interface TowerEntity {
